@@ -10,7 +10,7 @@ The notes are organized according to the [official AISYS prelim reading list](ht
 
 | # | Paper Title | Category | Venue | Year | PDF Link | Notes |
 |---|-------------|----------|-------|------|----------|-------|
-| 1 | ImageNet Classification with Deep Convolutional Neural Networks | Training Systems | NeurIPS | 2012 | [PDF](https://proceedings.neurips.cc/paper_files/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf) | [📝](paper_01.md) |
+| 1 | ImageNet Classification with Deep Convolutional Neural Networks | Training Systems | NeurIPS | 2012 | [PDF](https://proceedings.neurips.cc/paper_files/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf) | [📝](alexnet.md) |
 | 2 | XGBoost: A Scalable Tree Boosting System | ClassicML | KDD | 2016 | [PDF](https://arxiv.org/pdf/1603.02754) | [📝](paper_02.md) |
 | 3 | Checkmate: Breaking the Memory Wall with Optimal Tensor Rematerialization | TensorOptimization | - | - | [PDF](https://arxiv.org/abs/1910.02653) | [📝](paper_03.md) |
 | 4 | Anatomy of High-Performance Matrix Multiplication | Architecture | - | - | [PDF](https://www.cs.utexas.edu/~pingali/CS378/2008sp/papers/gotoPaper.pdf) | [📝](paper_04.md) |
@@ -29,28 +29,52 @@ The notes are organized according to the [official AISYS prelim reading list](ht
 
 ## 📝 Note Structure
 
-Each paper note follows a consistent format:
+Each paper note follows a consistent format with two main sections:
 
 ```markdown
 # Paper Title
 
-## 🎯 Key Contributions
-- 
 
-## 🔍 Main Ideas
-- 
+## 1. 📖 Paper Understanding
 
-## 💡 Key Insights
-- 
+### The Problem
+- **What problem does this paper solve?**
+- **Prior art and why they didn't work well:**
+- **Related work:**
 
-## ❓ Questions & Clarifications
-- 
+### The Challenge
+- **What are the main challenges in solving this problem?**
 
-## 🔗 Related Work
-- 
+### The Key Idea
+- **High-level approach to solving the problem:**
 
-## 📚 References
-- 
+### The Method
+- **Brief overview (detailed analysis in Section 2):**
+
+### Pros & Cons
+- **Strengths:**
+- **Weaknesses/Limitations:**
+
+### Impact & Contributions
+- **Key contributions to the field:**
+- **How did this paper change the field after its release?**
+
+### [Optional] Background & History
+- **Useful background knowledge:**
+- **Pre-history and context:**
+
+## 2. 🔬 Key Technical Details
+
+### Deep Method Understanding
+- **How does the method work in detail?**
+- **Key algorithms and techniques:**
+
+### Case Studies & Examples
+- **Specific examples and implementations:**
+
+### Technical Insights
+- **Deep technical understanding and nuances:**
+
 ```
 
 ## 🤝 Contributing
