@@ -157,3 +157,43 @@ application of the chain rule of calculus to compute gradients efficiently in mu
 ### Useful Resource for Backprop:
 - CMU deep learning system lectures: https://dlsyscourse.org/lectures/
    - Manual Neural Networks / Backprop: https://youtu.be/OyrqSYJs7NQ?feature=shared
+
+
+## Background Concepts: CNN
+### Historical and Contextual Background
+1. Early Inspirations (1950s–1980s)
+  - Neuroscience roots: Hubel & Wiesel (1960s) discovered that neurons in the visual cortex of cats respond selectively to localized features like edges and orientations. This idea of hierarchical feature extraction inspired early computational models.
+  - Early neural vision models: Researchers began experimenting with local receptive fields and shared weights to mimic this biological efficiency.
+2. Birth of CNN
+  - Neocognitron: It introduced the concepts of convolutional layers (local receptive fields + shared weights) and pooling (subsampling). But it lacked a systematic training method like backpropagation.
+  - LeNet (late 1980s–1990s): By combining convolutional architecture with backpropagation, successfully read handwritten digits (used by banks for check processing). This was one of the first practical CNN applications.
+3. Dormancy
+  - For the 1990s–2000s, CNNs were underused because:
+    - Datasets were too small.
+    - Computing power (esp. GPUs) wasn’t widely available.
+  - Instead, hand-engineered features (like SIFT - Scale-Invariant Feature Transform, HOG) dominated computer vision.
+4. Revival: AlexNet
+
+### CNN
+CNNs are specialized neural networks for grid-like data (e.g., images, which are 2D pixel grids)
+
+1. convolutional layers:
+- instead of each neuron connecting to all input (like MLP), each neuron connects to only a local receptive field
+- the same set of weights is shared across the whole image, sliding spatially (the convolution op)
+- reduce parameters dramatically and encodes the prior (locality & translation invariance)
+2. activation function:
+- apply nonlinearities  (sigmoid, tanh, now ReLu) after convolution
+- enable modelling of nonlinear features
+3. pooling (subsampling)
+- to reduce the spatial dimensions (width and height) of feature maps obtained from convolutional layers while retaining important information
+- makes representations more translation-invariant
+- eg: max-pooling -> take max value in a small region
+4. Fully Connected Layers
+- flatten features and pass through dense layers for classification or regression
+5. Training with Backpropagation
+- loss + gradient for backprop
+
+### CNN's implication
+- Parameter efficiency: Weight sharing means far fewer parameters than dense MLPs — making training feasible.
+- Inductive bias: Encodes spatial locality and translation invariance, both crucial for vision.
+- Scalability: With GPUs and large datasets, CNNs scaled to real-world tasks where hand-engineered features failed.
