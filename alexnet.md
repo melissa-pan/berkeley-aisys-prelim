@@ -11,42 +11,48 @@
 ## 1. 📖 Paper Understanding
 
 ### The Problem
-- **What problem does this paper solve?**
 
+> What problem does this paper solve?
+**scale** -> "to learn thousands of object, we need model with larger learning capability"
 
-- **Prior art and why they didn't work well:**
+> Prior art and why they didn't work well:
+- no large scale data -> which only became available when imagenet came out
 
-
-- **Related work:**
-
-
-### The Challenge
-- **What are the main challenges in solving this problem?**
+> Related work:
 
 
 ### The Key Idea
-- **High-level approach to solving the problem:**
+> High-level approach to solving the problem:
+CNN is parameter efficent thus easiler to train, and capture local feature.
 
+
+### The Challenge
+> What are the main challenges in solving this problem?
+-  CNN is still prohibiitively expensive to apply in large scale for high resolution images
+- how to prevent overfitting?
 
 ### The Method
-- **Brief overview (detailed analysis in Section 2):**
-
+> Brief overview (detailed analysis in Section 2):
+- 8 layers: 5 conv + 3 fully connected
 
 ### Pros & Cons
-- **Strengths:**
+> Strengths:
 
 
-- **Weaknesses/Limitations:**
+> Weaknesses/Limitations:
 
 
 ### Impact & Contributions
-- **Key contributions to the field:**
+> Key contributions to the field:
   - First successful application of deep CNNs to large-scale image classification
   - Demonstrated the power of end-to-end learning for computer vision
   - Popularized ReLU activation functions
   - Showed effectiveness of dropout regularization
 
-- **How did this paper change the field after its release?**
+The vison: "all exp. suggests that alexnet can be improved with faster GPU and bigger dataset.". Which turn out to be ture.
+
+
+> How did this paper change the field after its release?
 
 
 ### [Optional] Background & History
@@ -78,6 +84,24 @@ I found this talk to be very insightful [https://youtu.be/Z7naK1uq1F8?feature=sh
 
 
 - **Key algorithms and techniques:**
+1. ReLu
+- previous activation method: tanh or sigmoid 
+  - tanh activations can saturate when inputs become large or very negative, outputting values close to -1 or 1. In these saturated regions, the gradients become very small (close to zero), causing the vanishing gradient problem.
+- ReLu reach 6x faster convergence than tanh on CIFAR -> faster learning enable training of a large network
+- without ReLU, it'd not been possible (training speed) to train a large network
+- ReLU has a constant gradient of 1 for positive inputs, which maintains strong gradient signals and helps avoid the problem of vanishing gradient
+
+<img src="Figs/alexnet_relu.png" alt="ReLU activation in AlexNet (from paper)" width="350"/>
+
+2. Multi-GPU accerlation
+- use 2 GTX350 GPU (3GB memory)
+ 
+
+
+- GPU for NN training is a known technique before alexnet and shown 10-60x speedup from the IDSIA group
+  - What's special about AlexNet using GPU is **scale of data**
+  - AlexNet was much deeper and larger (60M parameters, 8 layers) than previous CNNs. It needed the GPU not just for speed, but for feasibility.
+
 
 ### Case Studies & Examples
 - **Specific examples and implementations:**
