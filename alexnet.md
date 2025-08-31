@@ -94,9 +94,18 @@ I found this talk to be very insightful [https://youtu.be/Z7naK1uq1F8?feature=sh
 <img src="Figs/alexnet_relu.png" alt="ReLU activation in AlexNet (from paper)" width="350"/>
 
 2. Multi-GPU accerlation
-- use 2 GTX350 GPU (3GB memory)
- 
-
+- use 2 GTX350 GPU (3GB memory) -> the full network didn’t fit on one GPU (3 GB memory limit).
+- Trick: GPU communicate only in certain layers.
+  - Intuition: In CNNs, early filters tend to learn generic local features (edges, corners). It’s fine if GPU1 and GPU2 each learn their own sets of such filters independently — they don’t need to constantly talk.
+  - Merge at higher layers where abstraction matters: Deeper in the network, features become more abstract and combining them becomes essential (e.g., textures + shapes → objects)
+  - more details for each layer: [https://chatgpt.com/s/t_68b4df039bfc81918ef08f666ba4b592](https://chatgpt.com/s/t_68b4df039bfc81918ef08f666ba4b592)
+- This is closest to pipeline model parallelism, but not a fully pipelined system. It was more like:
+  - different layers were assigned to different GPUs.
+  - at specific points (not every layer), feature maps were exchanged
+- GPU background
+  - GPU is specialized for massive parallelism
+  - CNN operations (conv, matmul, activation) are highly parallelizable 
+  - in 90s-2000, most NN were trained on CPU -> optmized for sequential task and control flow -> if use for AlexNet would taken weeks or months
 
 - GPU for NN training is a known technique before alexnet and shown 10-60x speedup from the IDSIA group
   - What's special about AlexNet using GPU is **scale of data**
