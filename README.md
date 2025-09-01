@@ -11,7 +11,7 @@ The notes are organized according to the [official AISYS prelim reading list](ht
 | # | Paper Title | PDF Link | Notes | Category | Venue | Year |
 |---|-------------|----------|-------|----------|-------|------|
 | 1 | ImageNet Classification with Deep Convolutional Neural Networks | [PDF](https://proceedings.neurips.cc/paper_files/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf) | [📝](alexnet.md) | Training Systems | NeurIPS | 2012 |
-| 2 | XGBoost: A Scalable Tree Boosting System | [PDF](https://arxiv.org/pdf/1603.02754) | [📝](paper_02.md) | ClassicML | KDD | 2016 |
+| 2 | XGBoost: A Scalable Tree Boosting System | [PDF](https://arxiv.org/pdf/1603.02754) | [📝](xgboost.md) | ClassicML | KDD | 2016 |
 | 3 | Checkmate: Breaking the Memory Wall with Optimal Tensor Rematerialization | [PDF](https://arxiv.org/abs/1910.02653) | [📝](paper_03.md) | TensorOptimization | - | - |
 | 4 | Anatomy of High-Performance Matrix Multiplication | [PDF](https://www.cs.utexas.edu/~pingali/CS378/2008sp/papers/gotoPaper.pdf) | [📝](paper_04.md) | Architecture | - | - |
 | 5 | Why Systolic Architectures | [PDF](http://www.eecs.harvard.edu/~htk/publication/1982-kung-why-systolic-architecture.pdf) | [📝](paper_05.md) | Architecture | - | - |
