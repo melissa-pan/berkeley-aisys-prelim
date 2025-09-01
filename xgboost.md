@@ -43,7 +43,7 @@
 > How did this paper change the field after its release?
 
 
-### [Optional] Background & History
+### XGBoost Innovations on Gradient Boosting
 - **Useful background knowledge:**
   - Gradient boosting and ensemble methods
   - Decision trees and tree learning algorithms
@@ -55,7 +55,46 @@
 - AdaBoost (1997) was the first practical boosting algorithm
 - Gradient boosting (2001) generalized boosting to arbitrary loss functions
 - Random Forest showed power of tree ensembles
-- But existing implementations were too slow for big data era
+- But existing implementations were too slow for big data
+
+#### **Second-order Methods:**
+- Traditional gradient boosting uses only first-order gradients
+- XGBoost uses second-order (Hessian) information
+- Provides better convergence and more accurate approximations
+
+#### **Regularization:**
+- Explicit regularization in objective function
+- Controls model complexity and prevents overfitting
+- L1 and L2 regularization on leaf weights
+
+#### **Systems Optimizations:**
+- Focus on making algorithm practically scalable
+- Cache-aware algorithms and data structures
+- Parallel and distributed computing support
+
+### Impact on Machine Learning
+
+#### **Paradigm Shift:**
+- Showed that careful systems engineering could make algorithms practical
+- Demonstrated importance of implementation for algorithm adoption
+- Influenced design of subsequent ML systems
+
+#### **Competition with Deep Learning:**
+- While deep learning dominated unstructured data (images, text)
+- XGBoost remained king of structured/tabular data
+- Sparked renewed interest in tree-based methods
+
+#### **Open Source Impact:**
+- Made high-performance gradient boosting accessible
+- Enabled widespread adoption in industry and academia
+- Inspired development of competing libraries (LightGBM, CatBoost)
+
+### Useful Resources:
+- Original XGBoost paper: https://arxiv.org/pdf/1603.02754
+- XGBoost documentation: https://xgboost.readthedocs.io/
+- Tianqi Chen's talks on XGBoost design principles
+- "Elements of Statistical Learning" Chapter 10 on Boosting
+
 
 ***
 
@@ -186,23 +225,32 @@ Algorithm: Sparsity-aware Split Finding
 ### Historical Context
 1. **Boosting Origins (1990s)**:
    - Theoretical foundations in PAC learning
-   - AdaBoost: First practical boosting algorithm
-   - Focused on binary classification with exponential loss
+   - AdaBoost: First practical boosting algorithm 
+      - stump: weak learner, two leaf nodes for each condition
+      - combine a lot of weak learner -> almost always stumps
+      - each stump have different weights based on error rate 
+      - each stump is made by taking the previous stump's error into account
+      - often viewed as somewhat mysterious statistically
+   - Focused on **binary classification** with exponential loss
+   - SOTA method for tabluar data for more than a decade
+  - late 90s - boosting as functional gradient descent: reweighting examples heuristically (like AdaBoost), boosting can be understood as minimizing a differentiable loss function by adding weak learners in a stage-wise manner.
 
 2. **Gradient Boosting (2001)**:
    - Friedman generalized boosting to arbitrary differentiable loss functions
    - Key insight: Boosting as gradient descent in function space
+      - taking small steps towards the right direction
    - Enabled regression and other tasks beyond classification
 
 3. **Tree Boosting**:
    - Combined gradient boosting with decision trees
    - Trees as weak learners provide natural feature interactions
    - Became dominant approach for structured/tabular data
+   - Essentially tree boosting is just gradient boosting + trees
 
 ### Gradient Boosting Algorithm
 
 #### **Core Idea:**
-Sequentially add models that correct errors of previous models:
+Sequentially add models (weak learner) that correct errors of previous models:
 ```
 F₀(x) = argmin_γ Σᵢ L(yᵢ, γ)
 For m = 1 to M:
@@ -212,53 +260,13 @@ For m = 1 to M:
   4. Update: Fₘ(x) = Fₘ₋₁(x) + γₘhₘ(x)
 ```
 
+Each step: compute pseudo-residuals → fit a tree → add it to the ensemble.
+
 #### **Why Trees Work Well:**
 - **Feature interactions**: Trees naturally capture feature interactions
 - **Non-parametric**: No assumptions about data distribution
 - **Interpretability**: Tree structure provides interpretable rules
 - **Robustness**: Handle mixed data types and missing values
-
-### XGBoost Innovations
-
-#### **Second-order Methods:**
-- Traditional gradient boosting uses only first-order gradients
-- XGBoost uses second-order (Hessian) information
-- Provides better convergence and more accurate approximations
-
-#### **Regularization:**
-- Explicit regularization in objective function
-- Controls model complexity and prevents overfitting
-- L1 and L2 regularization on leaf weights
-
-#### **Systems Optimizations:**
-- Focus on making algorithm practically scalable
-- Cache-aware algorithms and data structures
-- Parallel and distributed computing support
-
-### Impact on Machine Learning
-
-#### **Paradigm Shift:**
-- Showed that careful systems engineering could make algorithms practical
-- Demonstrated importance of implementation for algorithm adoption
-- Influenced design of subsequent ML systems
-
-#### **Competition with Deep Learning:**
-- While deep learning dominated unstructured data (images, text)
-- XGBoost remained king of structured/tabular data
-- Sparked renewed interest in tree-based methods
-
-#### **Open Source Impact:**
-- Made high-performance gradient boosting accessible
-- Enabled widespread adoption in industry and academia
-- Inspired development of competing libraries (LightGBM, CatBoost)
-
-### Useful Resources:
-- Original XGBoost paper: https://arxiv.org/pdf/1603.02754
-- XGBoost documentation: https://xgboost.readthedocs.io/
-- Tianqi Chen's talks on XGBoost design principles
-- "Elements of Statistical Learning" Chapter 10 on Boosting
-
-
 
 
 ## Background: Random Forest
@@ -303,3 +311,22 @@ Key Features of Random Forest:
 3. Robustness:
     - Handles high-dimensional data, missing values, and mixed data types.
     - Resistant to overfitting (because of averaging and randomness).
+
+## Background: Random Forest vs. Gradient Boosting
+
+Both are ensembling method.
+
+| Aspect               | Random Forest (RF)           | Gradient Boosting (GB)              |
+| -------------------- | ---------------------------- | ----------------------------------- |
+| **Introduced**       | Breiman, 2001                | Friedman, 2001                      |
+| **Family**           | Bagging (variance reduction) | Boosting (bias reduction)           |
+| **Tree Building**    | Parallel, independent trees  | Sequential, each corrects previous  |
+| **Bias–Variance**    | Low variance, modest bias    | Low bias, higher variance risk      |
+| **Overfitting Risk** | Low                          | Higher (if not regularized)         |
+| **Ease of Tuning**   | Few hyperparameters, simple  | Many hyperparameters, sensitive     |
+| **Performance**      | Strong, stable baseline      | Often higher accuracy (with tuning) |
+| **Speed**            | Parallelizable, fast         | Sequential, slower                  |
+
+Random Forests = many independent trees, averaged → stable, variance reduction.
+
+Gradient Boosting = sequential trees correcting errors → powerful, bias reduction but riskier.
