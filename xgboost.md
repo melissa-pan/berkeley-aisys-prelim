@@ -107,8 +107,9 @@ XGBoost is still gradient tree boosting, but it introduces regularization + syst
 ### Method
 
 #### 1. **Gradient Tree Boosting Framework**
+Train model in an additive manner - add one new function at a time, fitting it to improve the current model.
 
-Explicit Regularization
+##### Explicit Regularization
 - Additive model: `ŷᵢ = Σₖ fₖ(xᵢ)` where each `fₖ` is a tree
 - Objective function with regularization:
   ```
@@ -116,7 +117,6 @@ Explicit Regularization
   ```
     - `𝑙`  = convex differentiable loss (e.g., logistic, squared error)
     - `fₖ` = regression tree
-- Second-order approximation using Taylor expansion
 - Regularization term: `Ω(f) = γT + ½λ||w||²`
     - `𝑇`: number of leaves in the tree -> intuition: the more leaves, the more complex the tree
     - `𝛾`: penalizes number of leaves (complexity) -> hyperparameter
@@ -126,6 +126,23 @@ Explicit Regularization
 > L2 Regularization: 
 adds a penalty for large weights. Squared Euclidean length of weight vector. Intuitively, it says “prefer simple models with small parameter values.” Geometrically, it keeps the weight vector short; statistically, it’s a Gaussian prior centered at zero; in optimization, it acts like friction that constantly pulls weights toward zero.
 - L2 regularization prevents any single leaf from making a huge correction, making the ensemble more stable.
+
+
+##### Second-Order Apprixatimation using Taylor expansion
+
+At each step of boosting, we want to pick a new tree `𝑓𝑡(𝑥)` that improves the current model’s predictions. The true loss function `𝐿` is complicated (depends on data, predictions, nonlinear trees). We can’t optimize it directly. So XGBoost: we can do better by also using the second derivative (curvature) to approximate the loss locally.
+
+<img src="Figs/xgboost_formula3.png" width="500"/>
+
+##### Split finding algorithm
+For a fixed tree structure, we can compute the quality (sth. like the impurity score for decision tree) → Given this, how we find the best split is called “split-finding algorithm” (usually greedy)
+
+- Eq. 4: Express the objective as a sum over leaves (gradients = push, Hessians = resistance).
+- Eq. 5: Compute the optimal prediction for each leaf (balance push vs. resistance).
+- Eq. 6: Measure the overall quality of the tree structure.
+- Eq. 7: Evaluate whether splitting a node is worth it (children fit vs. parent fit, adjusted for penalty).
+
+<img src="Figs/xgboost_splitting_formula.png" width="500"/>
 
 #### 2. **Sparsity-Aware Split Finding**
 - **Problem**: Real data often has missing values or sparse features
