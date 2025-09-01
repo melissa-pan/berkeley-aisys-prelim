@@ -57,7 +57,7 @@ CNN is parameter efficent thus easiler to train, and capture local feature.
 
 ### Pros & Cons
 > Strengths:
-- Dramatically improved accuracy on ImageNet (15.3% error vs 26.2% previous best)
+- Dramatically improved accuracy on ImageNet (15.3% error vs 26.2% previous best) -> almost half of the error rate
 - Demonstrated effectiveness of deep learning for computer vision
 - Automatic feature learning without manual engineering
 - Scalable architecture that could be extended for bigger scale
@@ -69,10 +69,13 @@ CNN is parameter efficent thus easiler to train, and capture local feature.
 ### Impact & Contributions
 > Key contributions to the field:
   - First successful application of deep CNNs to large-scale image classification
+  - Scalability proved: Showed CNNs + GPUs could handle million-scale datasets.
   - Demonstrated the power of end-to-end learning for computer vision
   - Popularized ReLU activation functions
   - Showed effectiveness of dropout regularization
-
+  - Generalization across datasets: Gains weren’t specific to ImageNet; improvements carried over to other large datasets.
+  - Show Depth mattered: Removing even one convolutional layer degraded performance by ~2% top-1 accuracy. 
+  
 The vison: "all exp. suggests that alexnet can be improved with faster GPU and bigger dataset.". Which turn out to be ture.
 
 
@@ -200,6 +203,14 @@ I found this talk to be very insightful [https://youtu.be/Z7naK1uq1F8?feature=sh
     - During training, for each image:  
       - add a small perturbation along those principal components, scaled by random coefficients. `[R,G,B]→[R,G,B]+i=1∑3​αi​λi​pi​`
     - Effect: the image’s overall color balance is shifted slightly, but the object identity remains unchanged.
+
+### Interesting findings
+- Visualization of learned filters: 
+  - Conv1 kernels looked like Gabor-like edge detectors and color blobs
+  - GPU1 are color-agnostic, while kernels on GPU2 are color specific -> specialization of kernels
+- Feature space similarity
+  - Images considered “similar” by the network often shared semantic content (e.g., dogs in different poses), not just low-level pixel similarity.
+
 
 ## 📚 References
 - Krizhevsky, A., Sutskever, I., & Hinton, G. E. (2012). ImageNet classification with deep convolutional neural networks. Advances in neural information processing systems, 25.
