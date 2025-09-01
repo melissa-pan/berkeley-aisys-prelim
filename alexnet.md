@@ -79,12 +79,39 @@ I found this talk to be very insightful [https://youtu.be/Z7naK1uq1F8?feature=sh
 
 ## 2. 🔬 Key Technical Details
 
-### Deep Method Understanding
-- **How does the method work in detail?**
+### Method
+- 8 layer: 5conv + 3 fully connected
+  - Conv1: both GPUs compute Conv1 independently with identical filters and input (No cross-GPU communication needed here)
+  - Conv2: filters were split in 1/2 across GPUs
+  - Conv3: full cross-GPU communication begins here
+  – Conv4-5: each filter connects only to the half of Conv3 -> Conv4 feature maps on the same GPU
+  - FC6-8: partitioned across GPUs, with cross-connections ensuring a unified model.
+- last layer fed to 1000-way softmax
 
+| Layer | Cross-GPU Communication? | Paper says…                                   |
+| ----- | ------------------------ | --------------------------------------------- |
+| Conv1 | ❌ (duplicated, no need)  | Both GPUs compute same Conv1                  |
+| Conv2 | ❌ No                     | Each GPU connects only to local Conv1 maps    |
+| Conv3 | ✅ Yes                    | Filters connect to all Conv2 maps (both GPUs) |
+| Conv4 | ❌ No                     | Each GPU connects only to local Conv3 maps    |
+| Conv5 | ❌ No                     | Each GPU connects only to local Conv4 maps    |
+| FC6–8 | ✅ Yes                    | Fully connected layers span both GPUs         |
 
-- **Key algorithms and techniques:**
-1. ReLu
+- ReLu apply to output of every conv & fully connected layer
+- Maxpooling at layer 2,3,5
+
+- Trained with SGD
+  - small weight decay, not only regularize for overfitting but also reduce training error
+- weight initialized with non zero mean Gaussian distribution with std 0,01
+  - If weights are too large, activations can explode, leading to unstable gradients.
+  - If weights are too small (e.g. all zeros), neurons become symmetric and learn the same thing (no diversity).
+- bias in 2,4,5 conv and fc set to 1 for Relu to have positive input in early stages. → keeps ReLUs alive, accelerates training.
+- Remaining set to 0. → no need to artificially boost, data already ensures activation.
+
+<img src="Figs/alexnet_arch.png"/>
+
+>  Key algorithms and techniques:**
+1. ReLu: `f(x) = max(0, x)`
 - previous activation method: tanh or sigmoid 
   - tanh activations can saturate when inputs become large or very negative, outputting values close to -1 or 1. In these saturated regions, the gradients become very small (close to zero), causing the vanishing gradient problem.
 - ReLu reach 6x faster convergence than tanh on CIFAR -> faster learning enable training of a large network
@@ -102,6 +129,7 @@ I found this talk to be very insightful [https://youtu.be/Z7naK1uq1F8?feature=sh
 - This is closest to pipeline model parallelism, but not a fully pipelined system. It was more like:
   - different layers were assigned to different GPUs.
   - at specific points (not every layer), feature maps were exchanged
+- 2 GPU takes slightly less time to train than one-GPU net
 - GPU background
   - GPU is specialized for massive parallelism
   - CNN operations (conv, matmul, activation) are highly parallelizable 
@@ -111,27 +139,44 @@ I found this talk to be very insightful [https://youtu.be/Z7naK1uq1F8?feature=sh
   - What's special about AlexNet using GPU is **scale of data**
   - AlexNet was much deeper and larger (60M parameters, 8 layers) than previous CNNs. It needed the GPU not just for speed, but for feasibility.
 
+3. Local Response Normalization 
+- local competition between neurons: each neuron’s response is “divided” by the energy of its neighbors (within the same spatial location, across nearby feature maps)
+- Normalization happens across channels (feature maps), not within a single feature map.
+- Lateral inhibition: If one feature map has a strong activation at (x,y), it suppresses activations at the same location in neighboring feature maps.
+- Encourages specialization: Different filters “compete” to respond strongly at a given spot, rather than all firing at once.
+- Stabilizes training: Prevents ReLU units from growing unbounded in early layers.
 
-### Case Studies & Examples
-- **Specific examples and implementations:**
+4. Overlapping Pooling
+- Each pooling region shares pixels with its neighbors.
+- More robust representations: Overlapping pooling gives slightly smoother invariance because regions “see” some of the same inputs.
+- Less overfitting: The overlap forces more redundancy in feature extraction, which reduces the risk of over-specialization.
+- Empirical gain
 
 
-### Technical Insights
-- **Deep technical understanding and nuances:**
+5. [Prevent Overfitting] Dropout
+- a regularization technique introduced by Hinton et al. (2012, around the same time as AlexNet)
+- During training, it randomly "drops" (sets to zero) some neurons’ activations with a given probability
+- At test time, all neurons are kept, but their outputs are scaled down to account for training-time dropout.
+- Without dropout, neurons can co-adapt (e.g., “I’ll only activate if my neighbor does too”).
+- With dropout, each neuron must learn useful features independently, since it can’t rely on others always being present.
+- applied to the first two fully connected layers
+- significant boost in generalization and became a standard tool in deep learning.
 
-## ❓ Personal Questions to Answer
-- **What did I learn from this paper?**
-  - 
+6. [Prevent Overfitting] Data Augmentation
+  - "realtime" transformation on CPU as the previous batch is training on GPU -> no need for additional disk space
+  - Method 1: image translation & horizontal reflection 
+    - extract random 224x224 patches from the 256x256 image -> increase the training sieze by 2048x
+    - test time: four corner + center patch + their reflection
+  - Method 2: color jittering
+    - PCA (Principal Component Analysis) on the RGB pixel values across the entire training dataset.
+    - During training, for each image:  
+      - add a small perturbation along those principal components, scaled by random coefficients. `[R,G,B]→[R,G,B]+i=1∑3​αi​λi​pi​`
+    - Effect: the image’s overall color balance is shifted slightly, but the object identity remains unchanged.
 
-- **What questions do I still have?**
-  - 
+Used image transformations (cropping, mirroring, color jitter) to artificially enlarge the dataset and improve generalization.
 
-- **How does this relate to other papers I've read?**
-  - 
 
-- **What would I do differently if I were to implement this?**
-  - 
-
+## Thoughts & Summary
 
 ## 📚 References
 - Krizhevsky, A., Sutskever, I., & Hinton, G. E. (2012). ImageNet classification with deep convolutional neural networks. Advances in neural information processing systems, 25.
