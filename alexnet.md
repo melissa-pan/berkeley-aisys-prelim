@@ -13,18 +13,38 @@
 ### The Problem
 
 > What problem does this paper solve?
+  - Large-scale image classification on ImageNet dataset (1.2M training images, 1000 classes)
+  - Previous methods struggled with the complexity and scale of ImageNet
+  - Need for automatic feature learning from raw pixel data
+
 **scale** -> "to learn thousands of object, we need model with larger learning capability"
 
 > Prior art and why they didn't work well:
 - no large scale data -> which only became available when imagenet came out
 
+then with imagenet:
+- Traditional computer vision relied on hand-engineered features (SIFT, HOG)
+- Shallow neural networks couldn't handle the complexity
+- Limited computational power prevented training deep networks
+- Overfitting issues with large parameter counts
+
+
 > Related work:
+- LeNet-5 (1998) - shallow CNN for digit recognition
+- SIFT and HOG features for image classification
+- Support Vector Machines with hand-crafted features
+
 
 
 ### The Key Idea
 > High-level approach to solving the problem:
+
 CNN is parameter efficent thus easiler to train, and capture local feature.
 
+
+  - Leverage GPU computing for efficient training
+  - Apply regularization techniques to prevent overfitting
+  - Design architecture specifically for ImageNet scale
 
 ### The Challenge
 > What are the main challenges in solving this problem?
@@ -37,10 +57,14 @@ CNN is parameter efficent thus easiler to train, and capture local feature.
 
 ### Pros & Cons
 > Strengths:
-
+- Dramatically improved accuracy on ImageNet (15.3% error vs 26.2% previous best)
+- Demonstrated effectiveness of deep learning for computer vision
+- Automatic feature learning without manual engineering
+- Scalable architecture that could be extended for bigger scale
 
 > Weaknesses/Limitations:
-
+  - Required significant computational resources
+  - Long training time -> at the time
 
 ### Impact & Contributions
 > Key contributions to the field:
@@ -53,6 +77,10 @@ The vison: "all exp. suggests that alexnet can be improved with faster GPU and b
 
 
 > How did this paper change the field after its release?
+  - Sparked the deep learning revolution in computer vision
+  - Led to rapid development of deeper architectures (VGG, ResNet, etc.)
+  - Established CNN as the standard approach for image classification
+  - Influenced design of subsequent neural network architectures
 
 
 ### [Optional] Background & History
@@ -111,7 +139,7 @@ I found this talk to be very insightful [https://youtu.be/Z7naK1uq1F8?feature=sh
 <img src="Figs/alexnet_arch.png"/>
 
 >  Key algorithms and techniques:**
-1. ReLu: `f(x) = max(0, x)`
+1. **ReLu: `f(x) = max(0, x)`**
 - previous activation method: tanh or sigmoid 
   - tanh activations can saturate when inputs become large or very negative, outputting values close to -1 or 1. In these saturated regions, the gradients become very small (close to zero), causing the vanishing gradient problem.
 - ReLu reach 6x faster convergence than tanh on CIFAR -> faster learning enable training of a large network
@@ -120,7 +148,7 @@ I found this talk to be very insightful [https://youtu.be/Z7naK1uq1F8?feature=sh
 
 <img src="Figs/alexnet_relu.png" alt="ReLU activation in AlexNet (from paper)" width="350"/>
 
-2. Multi-GPU accerlation
+2. **Multi-GPU accerlation**
 - use 2 GTX350 GPU (3GB memory) -> the full network didn’t fit on one GPU (3 GB memory limit).
 - Trick: GPU communicate only in certain layers.
   - Intuition: In CNNs, early filters tend to learn generic local features (edges, corners). It’s fine if GPU1 and GPU2 each learn their own sets of such filters independently — they don’t need to constantly talk.
@@ -139,21 +167,21 @@ I found this talk to be very insightful [https://youtu.be/Z7naK1uq1F8?feature=sh
   - What's special about AlexNet using GPU is **scale of data**
   - AlexNet was much deeper and larger (60M parameters, 8 layers) than previous CNNs. It needed the GPU not just for speed, but for feasibility.
 
-3. Local Response Normalization 
+3. **Local Response Normalization**
 - local competition between neurons: each neuron’s response is “divided” by the energy of its neighbors (within the same spatial location, across nearby feature maps)
 - Normalization happens across channels (feature maps), not within a single feature map.
 - Lateral inhibition: If one feature map has a strong activation at (x,y), it suppresses activations at the same location in neighboring feature maps.
 - Encourages specialization: Different filters “compete” to respond strongly at a given spot, rather than all firing at once.
 - Stabilizes training: Prevents ReLU units from growing unbounded in early layers.
 
-4. Overlapping Pooling
+4. **Overlapping Pooling**
 - Each pooling region shares pixels with its neighbors.
 - More robust representations: Overlapping pooling gives slightly smoother invariance because regions “see” some of the same inputs.
 - Less overfitting: The overlap forces more redundancy in feature extraction, which reduces the risk of over-specialization.
 - Empirical gain
 
 
-5. [Prevent Overfitting] Dropout
+5. **[Prevent Overfitting] Dropout**
 - a regularization technique introduced by Hinton et al. (2012, around the same time as AlexNet)
 - During training, it randomly "drops" (sets to zero) some neurons’ activations with a given probability
 - At test time, all neurons are kept, but their outputs are scaled down to account for training-time dropout.
@@ -162,7 +190,7 @@ I found this talk to be very insightful [https://youtu.be/Z7naK1uq1F8?feature=sh
 - applied to the first two fully connected layers
 - significant boost in generalization and became a standard tool in deep learning.
 
-6. [Prevent Overfitting] Data Augmentation
+6. **[Prevent Overfitting] Data Augmentation**
   - "realtime" transformation on CPU as the previous batch is training on GPU -> no need for additional disk space
   - Method 1: image translation & horizontal reflection 
     - extract random 224x224 patches from the 256x256 image -> increase the training sieze by 2048x
@@ -172,11 +200,6 @@ I found this talk to be very insightful [https://youtu.be/Z7naK1uq1F8?feature=sh
     - During training, for each image:  
       - add a small perturbation along those principal components, scaled by random coefficients. `[R,G,B]→[R,G,B]+i=1∑3​αi​λi​pi​`
     - Effect: the image’s overall color balance is shifted slightly, but the object identity remains unchanged.
-
-Used image transformations (cropping, mirroring, color jitter) to artificially enlarge the dataset and improve generalization.
-
-
-## Thoughts & Summary
 
 ## 📚 References
 - Krizhevsky, A., Sutskever, I., & Hinton, G. E. (2012). ImageNet classification with deep convolutional neural networks. Advances in neural information processing systems, 25.
