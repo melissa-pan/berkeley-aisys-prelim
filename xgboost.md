@@ -11,6 +11,9 @@
 ### The Problem
 
 > What problem does this paper solve?
+- Tree boosting: it is known to give **SOTA accuracy** in many tasks (classification, ranking, regression)
+- But **scalability** was a big problem: existing GBM are slow, memory intensive, and not robust for sparse & large data
+
 
 > Prior art and why they didn't work well:
 
@@ -20,6 +23,7 @@
 ### The Key Idea
 > High-level approach to solving the problem:
 
+XGBoost is still gradient tree boosting, but it introduces regularization + system-level innovations.
 
 
 ### The Challenge
@@ -103,13 +107,25 @@
 ### Method
 
 #### 1. **Gradient Tree Boosting Framework**
+
+Explicit Regularization
 - Additive model: `ŷᵢ = Σₖ fₖ(xᵢ)` where each `fₖ` is a tree
 - Objective function with regularization:
   ```
   L(φ) = Σᵢ l(yᵢ, ŷᵢ) + Σₖ Ω(fₖ)
   ```
+    - `𝑙`  = convex differentiable loss (e.g., logistic, squared error)
+    - `fₖ` = regression tree
 - Second-order approximation using Taylor expansion
 - Regularization term: `Ω(f) = γT + ½λ||w||²`
+    - `𝑇`: number of leaves in the tree -> intuition: the more leaves, the more complex the tree
+    - `𝛾`: penalizes number of leaves (complexity) -> hyperparameter
+    - `𝜆`: L2 penalty on leaf weights -> hyperparameter
+    - `𝑤`: vector of leaf weights
+
+> L2 Regularization: 
+adds a penalty for large weights. Squared Euclidean length of weight vector. Intuitively, it says “prefer simple models with small parameter values.” Geometrically, it keeps the weight vector short; statistically, it’s a Gaussian prior centered at zero; in optimization, it acts like friction that constantly pulls weights toward zero.
+- L2 regularization prevents any single leaf from making a huge correction, making the ensemble more stable.
 
 #### 2. **Sparsity-Aware Split Finding**
 - **Problem**: Real data often has missing values or sparse features
