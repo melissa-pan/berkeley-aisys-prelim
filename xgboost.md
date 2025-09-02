@@ -14,8 +14,13 @@
 - Tree boosting: it is known to give **SOTA accuracy** in many tasks (classification, ranking, regression)
 - But **scalability** was a big problem: existing GBM are slow, memory intensive, and not robust for sparse & large data
 
-
 > Prior art and why they didn't work well:
+
+A key problem in tree boosting is to find the best split. Piror arts includes:
+- scikit learn, R's gbm: basic exact greedy algorithm on **single machine** -> SLOW!!
+    - computationally demanding to enumerate through all possible splits for continous features
+    - first sort the data according to feature values then visit the data in sorted order
+
 
 > Related work:
 
@@ -30,36 +35,9 @@ XGBoost is still gradient tree boosting, but it introduces regularization + syst
 > What are the main challenges in solving this problem?
 
 
+
 ### The Method
 > Brief overview (detailed analysis in Section 2):
-
-
-### Pros & Cons
-> Strengths:
-
-> Weaknesses/Limitations:
-
-### Impact & Contributions
-> Key contributions to the field:
-
-
-
-> How did this paper change the field after its release?
-
-
-### XGBoost Innovations on Gradient Boosting
-- **Useful background knowledge:**
-  - Gradient boosting and ensemble methods
-  - Decision trees and tree learning algorithms
-  - Distributed computing and parallel algorithms
-  - Cache optimization and memory hierarchy
-
-#### **Pre-history and context:**
-- Boosting originated from theoretical work on PAC learning
-- AdaBoost (1997) was the first practical boosting algorithm
-- Gradient boosting (2001) generalized boosting to arbitrary loss functions
-- Random Forest showed power of tree ensembles
-- But existing implementations were too slow for big data
 
 #### **Second-order Methods:**
 - Traditional gradient boosting uses only first-order gradients
@@ -76,7 +54,14 @@ XGBoost is still gradient tree boosting, but it introduces regularization + syst
 - Cache-aware algorithms and data structures
 - Parallel and distributed computing support
 
-### Impact on Machine Learning
+### Pros & Cons
+> Strengths:
+
+> Weaknesses/Limitations:
+
+### Impact & Contributions
+> Key contributions to the field:
+
 
 #### **Paradigm Shift:**
 - Showed that careful systems engineering could make algorithms practical
@@ -93,6 +78,24 @@ XGBoost is still gradient tree boosting, but it introduces regularization + syst
 - Enabled widespread adoption in industry and academia
 - Inspired development of competing libraries (LightGBM, CatBoost)
 
+> How did this paper change the field after its release?
+
+
+### Background
+- **Useful background knowledge:**
+  - Gradient boosting and ensemble methods
+  - Decision trees and tree learning algorithms
+  - Distributed computing and parallel algorithms
+  - Cache optimization and memory hierarchy
+
+#### **Pre-history and context:**
+- Boosting originated from theoretical work on PAC learning
+- AdaBoost (1997) was the first practical boosting algorithm
+- Gradient boosting (2001) generalized boosting to arbitrary loss functions
+- Random Forest showed power of tree ensembles
+- But existing implementations were too slow for big data
+
+
 ### Useful Resources:
 - Original XGBoost paper: https://arxiv.org/pdf/1603.02754
 - XGBoost documentation: https://xgboost.readthedocs.io/
@@ -104,12 +107,10 @@ XGBoost is still gradient tree boosting, but it introduces regularization + syst
 
 ## 2. 🔬 Key Technical Details
 
-### Method
-
-#### 1. **Gradient Tree Boosting Framework**
+### 1. **Gradient Tree Boosting Framework**
 Train model in an additive manner - add one new function at a time, fitting it to improve the current model.
 
-##### Explicit Regularization
+#### Explicit Regularization
 - Additive model: `ŷᵢ = Σₖ fₖ(xᵢ)` where each `fₖ` is a tree
 - Objective function with regularization:
   ```
@@ -128,13 +129,13 @@ adds a penalty for large weights. Squared Euclidean length of weight vector. Int
 - L2 regularization prevents any single leaf from making a huge correction, making the ensemble more stable.
 
 
-##### Second-Order Apprixatimation using Taylor expansion
+#### Second-Order Apprixatimation using Taylor expansion
 
 At each step of boosting, we want to pick a new tree `𝑓𝑡(𝑥)` that improves the current model’s predictions. The true loss function `𝐿` is complicated (depends on data, predictions, nonlinear trees). We can’t optimize it directly. So XGBoost: we can do better by also using the second derivative (curvature) to approximate the loss locally.
 
 <img src="Figs/xgboost_formula3.png" width="500"/>
 
-##### Split finding algorithm
+#### Split Finding (math)
 For a fixed tree structure, we can compute the quality (sth. like the impurity score for decision tree) → Given this, how we find the best split is called “split-finding algorithm” (usually greedy)
 
 - Eq. 4: Express the objective as a sum over leaves (gradients = push, Hessians = resistance).
@@ -144,23 +145,99 @@ For a fixed tree structure, we can compute the quality (sth. like the impurity s
 
 <img src="Figs/xgboost_splitting_formula.png" width="500"/>
 
-#### 2. **Sparsity-Aware Split Finding**
-- **Problem**: Real data often has missing values or sparse features
-- **Default direction**: Each tree node learns a default direction for missing values
-- **Algorithm**: When feature value is missing, instance goes to default direction
-- **Optimization**: Only visit non-missing entries during split finding
-- **Impact**: Handles sparse data naturally without preprocessing
+#### Shrinkage and Column Subsampling
+Two additional techniques to prevent overfitting:
+1. Shrinkage: scale newly added weigths by a factor of N after each step of tree boosting
+2. Column (feature) subsampling
 
-#### 3. **Weighted Quantile Sketch**
-- **Problem**: Exact greedy algorithm too expensive for large datasets
-- **Solution**: Approximate algorithm using quantile sketches
+
+
+### 2. **Split Finding Algorithm**
+Exact greedy is often too slow, use approximate for split finding with global(require more steps) or local proposals, usually generated by percentile of features.
+
+<img src="Figs/xgboost_split_finding.png" width="450"/>
+
+
+
+**Approximate Algorithm with Sketches**
+- Use weighted quantile sketch to find candidate split points
+- Merge sketches from different machines in distributed setting
+- Prune sketches to maintain memory bounds while preserving accuracy -> only search within these candidate
+- key systems-level innovations
+
+(a) Global Approximate Algorithm
+- One global set of candidate split points per feature is built, before growing the tree.
+- Uses a weighted quantile sketch:
+    - Approximate the distribution of feature values (considering Hessians/gradients as weights).
+    - Pick `𝑘` quantiles → these define candidate thresholds.
+- Pros:
+    - Faster, since thresholds are computed once per feature.
+    - Good for large datasets, distributed settings.
+- Cons:
+    - Less adaptive, since thresholds aren’t tailored to the subset of data in a given node.
+    - May lose accuracy if feature distributions vary a lot across nodes.
+
+
+(b) Local Approximate Algorithm
+- For each node, recompute candidate thresholds locally based on data that reaches that node.
+    - node as node in the decision tree
+- Same idea: weighted quantile sketch, but restricted to that node’s samples.
+- Pros:
+    - more accurate
+    - often lead to better split w/ slightly higher accuracy
+- Cons:
+    - More expensive to compute -> threshold recomputed at each node
+    - can be prohibitive for very large tree or dataset
+
+
+
+#### 2.1 **Weighted Quantile Sketch**
+A data structure.
+- In boosting, each training example has a weight derived from its gradient/Hessian (first- and second-order derivatives of the loss).
+- So we don’t just want a “uniform quantile sketch” — we need a weighted quantile sketch that respects those sample weights.
 - **Key insight**: Use second-order gradient statistics as weights
 - **Algorithm**: 
   - Propose candidate split points using weighted quantiles
   - Merge and prune sketches to maintain accuracy bounds
 - **Guarantee**: ε-approximate quantile sketch with theoretical bounds
 
-#### 4. **System Design Optimizations**
+Rank Function `r(z)`:
+- find: how much cumulative wieght lies below z
+- z is candidate threshold value for node/feature
+```
+r(z) = sum_{i:x_i<z}(w_i)
+```
+
+The data structure:
+1. Merge:
+    - if two quantile summeries exists (eg: from two dta partitions), it can be merge into a single summary while preserving same error gaurantee
+2. Prune:
+    - summaries can get too large, we can prune down to smaller sizer (fewer candidate thresholds)
+3. Gaurantee:
+    - After merge +prune, the summary still satisfies the approximation property (weighted ranks with accuracy within epsilon)
+
+
+Weighted quantile sketch gives:
+- Scalability: mergeable in parallel/distributed settings.
+- Flexibility: works with arbitrary weights (not just uniform).
+- Accuracy: near-optimal splits without scanning every value.
+
+#### 2.2 **Sparsity-Aware Split Finding**
+- **Problem**: Real data often has missing values or sparse features
+    - Missing values in raw data (e.g., sensor readings absent). 
+    - Frequent zeros in data (e.g., text represented as bag-of-words).
+    - One-hot encoding (categorical → thousands of mostly 0 features).
+- **Default direction**: Each tree node learns a default direction for missing values
+- **Algorithm**: When feature value is missing, instance goes to default direction
+    - At each split, try both default directions and see which improves the loss more.
+- **Optimization**: Only visit non-missing entries during split finding
+- **Impact**: Handles sparse data naturally without preprocessing
+
+
+<img src="Figs/xgboost_sparsity.png" width="450"/>
+
+
+### 3. **System Design Optimizations**
 
 **Column Block for Parallel Learning:**
 - Store data in compressed column blocks
@@ -177,39 +254,6 @@ For a fixed tree structure, we can compute the quality (sth. like the impurity s
 - Use independent threads for block reading and gradient computation
 - Overlap computation with I/O operations
 
-### Key Algorithms and Techniques
-
-#### 1. **Split Finding Algorithm**
-```
-Algorithm: Exact Greedy Algorithm for Split Finding
-Input: I, instance set of current node
-       d, feature dimension
-1: gain ← 0
-2: G ← Σᵢ∈I gᵢ, H ← Σᵢ∈I hᵢ
-3: for k = 1 to d do
-4:   GL ← 0, HL ← 0
-5:   for j in sorted(I, by xⱼₖ) do
-6:     GL ← GL + gⱼ, HL ← HL + hⱼ
-7:     GR ← G - GL, HR ← H - HL
-8:     score ← max(score, GL²/(HL+λ) + GR²/(HR+λ) - G²/(H+λ))
-9: return Split with max score
-```
-
-#### 2. **Approximate Algorithm with Sketches**
-- Use weighted quantile sketch to find candidate split points
-- Merge sketches from different machines in distributed setting
-- Prune sketches to maintain memory bounds while preserving accuracy
-
-#### 3. **Sparsity-Aware Split Finding**
-```
-Algorithm: Sparsity-aware Split Finding
-1: for each feature k do
-2:   // Only enumerate non-missing values
-3:   for each j in sorted(Iₖ) do  // Iₖ = {i ∈ I : xᵢₖ ≠ missing}
-4:     // Try both default directions
-5:     Compute gain for left-default and right-default
-6:   Choose best split and default direction
-```
 
 ### System Architecture
 
