@@ -292,16 +292,47 @@ After: `O(K d ‖x‖0​ + ‖x‖0 ​logB)`
 - With block layout, each row’s feature values are stored together in blocks.
 - the log term is just a preprocessing one time cost
 
+Only done once because features in each column stays the same, only grad & hassin change as we build tree.
 
 #### **Cache Optimization:**
+- Problem: column block lead to non-continuous memory access.
+    - These gradient statistics are stored in a separate array (row-wise).
+    - Feature values are accessed sequentially (good for cache).
+    - Gradient stats are accessed by indirection (pointer lookup), which is random access into memory.
 - **Access patterns**: Design algorithms to maximize cache locality
 - **Prefetching**: Prefetch data blocks during computation
+    - allocate internal buffer in each thread and fetch all the graident statistics into it, then accumlate with mini batch
 - **Memory hierarchy**: Optimize for different levels of memory hierarchy
 
+Row block: a block of rows grouped together, across all features.
+- You partition the dataset by rows into chunks of size `B`
+    - Example: rows 0–999 in block 1, rows 1000–1999 in block 2, etc.
+- Inside each block, you then store columns sorted by feature value.
+- If block too small: constantly refetch -> inefficient parallelization
+- If block too big: cache misses -> slow
+
+
+<img src="Figs/xgboost_cache.png" width="250"/>
+
 #### **Out-of-core Learning:**
-- **Block sharding**: Divide data into blocks that fit in memory
+- Problem: real-world tabular datasets (billions of rows, many features) may exceed RAM capacity -> can't fit in cache
+- Idea: need to stream data from disk
+
+- **Block sharding**: If data is extremely large, XGBoost can split blocks across multiple disks (say two SSDs).
+- **Block compression**: store in compressed form on disk
+    - decompression happen in memory (CPU), usualy faster than disk i/o
 - **Asynchronous I/O**: Overlap disk I/O with computation
 - **Gradient computation**: Compute gradients block by block
+
+workflow:
+1. preprocess data into blocks (row range x column sorted)
+2. store these block (optionally compressed) on disk
+3. when training: 
+    - load one or more blocks from disk into memory
+    - scan them to evaluate candidate splits
+    - accumulate stats across all block
+    - find best split
+4. repeat for all node and tree
 
 ### Interesting Findings
 
