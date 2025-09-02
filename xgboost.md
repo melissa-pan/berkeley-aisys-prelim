@@ -260,8 +260,38 @@ Weighted quantile sketch gives:
 #### **Block Structure:**
 - **Compressed Sparse Column (CSC)**: Store features in column format
 - **Block division**: Split columns into blocks for parallel processing  
-- **Sorting**: Pre-sort each block by feature values
-- **Compression**: Use compression to reduce memory footprint
+- **Sorting**: Pre-sort each block by feature values -> one time cost
+- **Compression**: Use compression to reduce memory footprint 
+- parallelizable
+
+```
+K - total number of trees
+d - max depth of the tree
+n - number of training example
+q - number of candidate split points per feature (approximate algorithm).
+B - maximum number of rows in a block (in block structure).
+‖x‖0 - non missing data
+O(nlogn) - tree sorting 
+```
+
+##### Greedy
+Before: `O(K d ‖x‖0 log n)`
+- Each split requires binary searching over sorted feature values (logn factor).
+
+After: `O(K d ‖x‖0 + ‖x‖0 log n)` 
+
+- `𝑂(‖𝑥‖0 logn)` - one time cost for sorting
+- After preprocessing, each split is a linear scan (no binary search), so only `O(Kd‖x‖0​)`
+
+##### Approximate
+Before: `O(K d ‖x‖0 ​logq)`
+- For each candidate split, need binary search to find which quantile bucket a sample belongs to.
+- Overhead: logq, where q is number of candidate thresholds.
+
+After: `O(K d ‖x‖0​ + ‖x‖0 ​logB)`
+- With block layout, each row’s feature values are stored together in blocks.
+- the log term is just a preprocessing one time cost
+
 
 #### **Cache Optimization:**
 - **Access patterns**: Design algorithms to maximize cache locality
