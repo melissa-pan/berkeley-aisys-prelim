@@ -8,21 +8,41 @@
 
 ## 1. 📖 Paper Understanding
 
+deep learning system + optimization paper.
+
 ### The Problem
 
 > What problem does this paper solve?
 
 - **Memory Wall**: Deep neural network training is limited by GPU memory, not computation
+    - Training modern DNN is memory intensive, espcially with larger batch sizes, long sequences (transformers), or deep architectures.
+    - GPUs are extremely powerful at compute, but their device memory HBM is limited (16-80GB), and training can require hundreds of GBs.
 - **Scale Limitation**: Larger models and batch sizes are constrained by memory capacity
 - **Trade-off Challenge**: Existing solutions force a choice between memory efficiency and training speed
 - **Suboptimal Checkpointing**: Prior checkpointing strategies are ad-hoc and suboptimal
 
+
+**Can we systematically find the optimal rematerialization policy for a given model and device?
+
+
+
 > Prior art and why they didn't work well:
 
+- **Rematerialization**: 
+    - don't save any intermediate activations, just recompute them during backprop
+    - saves memory but costs alot more compute
+
 - **Gradient Checkpointing (Chen et al.)**: Save only subset of activations, recompute others
+  - save every sqrt(n)-th layer activation
+  - reduce memory from O(n) to O(sqrt(n))
   - But: heuristic choices of what to checkpoint
   - No principled optimization of the memory-time trade-off
   - Often leads to significant computational overhead
+
+- **Heuristic methods in frameworks:**
+    - PyTorch, TensorFlow, JAX have “activation checkpointing” utilities, usually hand-designed rules (e.g., checkpoint every block).
+
+These methods are not optimal — they balance memory vs. compute with ad hoc strategies.
 
 - **Memory-efficient optimizers**: Techniques like gradient accumulation
   - But: limited scalability and still hit fundamental memory limits
@@ -35,11 +55,21 @@
 
 > High-level approach to solving the problem:
 
-Formalize the **tensor rematerialization problem** as an optimization problem and solve it optimally:
+Analogy: Instead of checkpointing heuristics, use exact combinatorial optimization.
+
+Formalize the **tensor rematerialization problem** as an *optimization problem* and solve it optimally:
 - **Mathematical formulation**: Model memory-time trade-offs as a mixed-integer linear program (MILP)
 - **Optimal scheduling**: Find the best decision of which tensors to store vs. recompute
 - **System integration**: Implement optimal schedules in practical training loops
 - **Hardware awareness**: Account for actual hardware costs in optimization
+
+At the core, Checkmate solves the tensor rematerialization *scheduling* problem:
+- Inputs:
+    - Computation graph of the model (operators, dependencies, tensor sizes).
+    - Memory capacity of the device.
+- Goal:
+    - Fit training within memory capacity
+    - minimize recomputation overhead
 
 ### The Challenge
 
@@ -60,6 +90,31 @@ Formalize the **tensor rematerialization problem** as an optimization problem an
 3. **Solver Integration**: Use off-the-shelf MILP solvers or approximation algorithms
 4. **Schedule Execution**: Implement optimal schedules in training frameworks
 5. **Dynamic Application**: Apply computed schedules across millions of training iterations
+
+Step 1: Model as a DAG
+- Represent forward and backward pass as a directed acyclic graph (DAG).
+- Nodes = operators.
+- Edges = tensor dependencies.
+- Each tensor has a memory cost.
+
+Step 2: Formulate the Optimization Problem (MILP)
+- Decision Variables:
+    - which tensor to keep in memory vs. recompute
+    - scheduling of forward/backward ops
+- Constraints:
+    - Memory usage at any time <= device limit
+    - dependency order is respected
+- Objective:
+    - minimize total computation time (original + recomputetation)
+
+Step 3: Solving with MILP
+- use standard MILP solver
+- exploit chain-like dependencies structure in DNN computation graph
+- can handle large models like ResNet, BERT, even GPT2
+
+Step 4: Execution
+- once the optimal schedule is found, checkmate generates a custom training loop to execute according to that schedule
+- integrates with PyTorch with graph tracing
 
 #### **Key Components:**
 - **Computational graph analysis**: Model DNN forward/backward pass as DAG
@@ -93,6 +148,8 @@ Formalize the **tensor rematerialization problem** as an optimization problem an
 - **Approximation algorithms**: Fast heuristics when exact solving is too slow
 - **Cost modeling**: Hardware-aware profiling for accurate trade-off modeling
 
+Gurantee optimality. Saves order of magnitude of memory for some model and enable training that was previously infeasible.
+
 #### **Systems Contributions**:
 - **Framework integration**: Seamless integration with PyTorch and other frameworks
 - **Schedule execution**: Efficient runtime system for executing optimal schedules
@@ -116,6 +173,13 @@ Formalize the **tensor rematerialization problem** as an optimization problem an
 - **Research direction**: Sparked research into automated ML system optimization
 - **Industry impact**: Adopted by companies for large-scale model training
 - **Framework integration**: Influenced memory optimization features in major ML frameworks
+
+> Hihger level impact
+1. Bridging ML and Systems Optimization:
+    - Shows how classical optimization (MILP) can solve a very practical ML systems problem.
+2. Impact on Large Model Training:
+    - Memory-efficient training methods are foundational for scaling up models (e.g., transformers with billions of parameters).
+    - Checkmate directly influenced later work on compiler-level graph optimization (e.g., Alpa, DeepSpeed’s memory optimizations, PyTorch’s activation checkpointing improvements).
 
 ### Background
 
@@ -560,24 +624,57 @@ def forward_with_checkpointing(x, layers, k=2):
 
 ### GPU Memory Systems
 
+GPU memory is hierarchical: Registers → Shared/L1 → L2 → HBM → Host DRAM.
+
 #### **Memory Hierarchy**:
 1. **Registers**: Fastest, private to each thread, ~KB per SM
-2. **Shared memory**: Fast, shared within thread block, ~100KB per SM  
-3. **L1 cache**: ~100KB per SM, automatic caching
-4. **L2 cache**: ~MB range, shared across SMs
-5. **Global memory (DRAM)**: Largest, ~GB range, highest latency
+    - Each CUDA core / thread has its own private registers.
+    - Stores scalars or very small tensors.
+    - Latency: ~1 cycle
+2. **Shared memory** (L1): Fast, shared within thread block, ~100KB per SM  
+    - Shared among threads in a block (SM = Streaming Multiprocessor).
+    - Latency: ~10s of cycles.
+    - Used for inter-thread communication and temporary storage.
+3. **L2 cache**: ~MB range, shared across SMs, ~100 cycles.
+4. **Global memory (HBM, off-chip)**: Largest, ~GB range, highest latency
+    - This is what we normally call “GPU memory” (e.g., 16 GB, 40 GB, 80 GB).
+    - Very high bandwidth (hundreds of GB/s to >1 TB/s), but latency is much higher than on-chip memory.
+    - Store:
+        - Model weights
+        - activations
+        - gradients
+        - optimizer states (adam + variance)
+5. Host Memory (CPU DRAM): 
+    - accessible over PCIe or NVLink
+    - Much slower (microsecond latency)
+    - sometime used for offloading tensor when GPU memory is insufficient (significantly slow down training)
 
-#### **Memory Bandwidth**:
-- **Peak bandwidth**: 1-2 TB/s for high-end GPUs
-- **Achieved bandwidth**: Often much lower due to access patterns
-- **Coalescing**: Contiguous memory accesses achieve higher bandwidth
-- **Bank conflicts**: Simultaneous access to same memory bank reduces bandwidth
 
 #### **Implications for ML**:
 - **Large tensors**: Live in global memory, bandwidth-bound operations
 - **Small tensors**: May fit in cache, compute-bound operations  
 - **Access patterns**: Sequential access much faster than random
 - **Occupancy**: Higher occupancy can hide memory latency
+
+#### Memory usage during training
+1. Model parameters (weights)
+    - forward: need to compute activation
+    - backprop: need to compute gradient
+    - store persistently
+2. Intermediate activations
+    - each layer's output is needed for backprop
+    - if kept, then memory becomes O(depth x batch) 
+    - biggest contributor to memory wall
+3. Gradients
+    - one graident tensor per weight arameters
+    - size = size of model weights
+4. optimizer states
+    - eg: Adam has 2 - (momentum + variance)
+    - size = 2 x model weights 
+
+Example:
+
+1B-parameter transformer: parameters = ~4 GB (fp16), optimizer states = ~8 GB, activations = ~40–60 GB (for a reasonable batch).
 
 ### Memory Management in ML Frameworks
 
@@ -653,5 +750,3 @@ Input → Conv1 → Activation1 → Conv2 → Activation2 → ... → Loss
 - **Memory-first design**: Optimize for memory usage first, then compute
 - **Adaptive algorithms**: Adjust to available memory dynamically
 - **Cross-layer optimization**: Coordinate across application, framework, hardware
-
-This comprehensive understanding of memory hierarchies and GPU architecture provides the foundation for understanding why Checkmate's principled approach to memory optimization is both necessary and effective for modern deep learning systems.
