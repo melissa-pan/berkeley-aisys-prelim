@@ -21,9 +21,10 @@ A key problem in tree boosting is to find the best split. Piror arts includes:
     - computationally demanding to enumerate through all possible splits for continous features
     - first sort the data according to feature values then visit the data in sorted order
 
-
-> Related work:
-
+- Existing systems couldn't handle sparse data efficiently
+- Memory limitations prevented processing large datasets
+- No effective out-of-core computation support
+- Limited parallelization and distributed computing capabilities
 
 ### The Key Idea
 > High-level approach to solving the problem:
@@ -34,10 +35,20 @@ XGBoost is still gradient tree boosting, but it introduces regularization + syst
 ### The Challenge
 > What are the main challenges in solving this problem?
 
+- **Scalability**: Handle billions of examples with limited resources
+- **Sparse data**: Real-world data often has missing values and sparse features
+- **Memory efficiency**: Process datasets larger than available RAM
+- **Speed**: Existing implementations too slow for practical use
+- **Approximate tree learning**: Balance between accuracy and efficiency
 
 
 ### The Method
 > Brief overview (detailed analysis in Section 2):
+- Gradient tree boosting with second-order approximation
+- Sparsity-aware split finding algorithm
+- Weighted quantile sketch for approximate tree learning
+- Cache-aware block structure for out-of-core computation
+- Column block format for parallel learning
 
 #### **Second-order Methods:**
 - Traditional gradient boosting uses only first-order gradients
@@ -56,12 +67,26 @@ XGBoost is still gradient tree boosting, but it introduces regularization + syst
 
 ### Pros & Cons
 > Strengths:
+- **Massive performance gains**: 10x faster than existing popular solutions
+- **Scalability**: Handles billions of examples on limited resources
+- **Versatility**: Works across diverse problem domains (classification, regression, ranking)
+- **Practical impact**: Used in 17 out of 29 Kaggle winning solutions in 2015
+- **Memory efficiency**: Effective out-of-core computation
+- **Handles sparse data**: Native support for missing values and sparse features
 
-> Weaknesses/Limitations:
+
 
 ### Impact & Contributions
 > Key contributions to the field:
-
+- **Algorithmic innovations**: 
+  - Sparsity-aware algorithm for handling missing values
+  - Weighted quantile sketch for approximate tree learning
+- **Systems contributions**:
+  - Cache-aware block structure for out-of-core learning
+  - Column block format enabling parallelization
+- **Practical impact**: Became the go-to tool for structured/tabular data
+- **Open source**: Made high-performance gradient boosting accessible to everyone
+- **Competition dominance**: Dominated ML competitions (Kaggle, KDDCup)
 
 #### **Paradigm Shift:**
 - Showed that careful systems engineering could make algorithms practical
@@ -79,6 +104,12 @@ XGBoost is still gradient tree boosting, but it introduces regularization + syst
 - Inspired development of competing libraries (LightGBM, CatBoost)
 
 > How did this paper change the field after its release?
+
+- Established gradient boosting as the gold standard for structured data
+- Influenced development of other boosting libraries (LightGBM, CatBoost)
+- Made tree boosting accessible for large-scale industrial applications
+- Shifted focus from neural networks back to tree methods for tabular data
+- Became essential tool in data science and ML competitions
 
 
 ### Background
@@ -103,7 +134,6 @@ XGBoost is still gradient tree boosting, but it introduces regularization + syst
 - "Elements of Statistical Learning" Chapter 10 on Boosting
 
 
-***
 
 ## 2. 🔬 Key Technical Details
 
