@@ -170,7 +170,10 @@ Q: Can we increase batch size or resolution under the same GPU memory?
 
 > Key results
 
-1. 5.1x bigger input size
+- **5.1x larger inputs**: Demonstrated on ResNet, Transformer models
+- **2-3x memory reduction**: Typical savings with <10% time overhead
+- **Break-even analysis**: When recomputation pays off vs. smaller batches
+- **Memory bandwidth**: Critical factor in recomputation decisions
 
 > Key contributions to the field:
 
@@ -294,13 +297,15 @@ Linear Reformulation of Memory Constraints:
 - Before: Free was a complicated AND / NOT condition
 - After: simple linear inequality
 
-
+Execution Plan Generation:
+<img src="Figs/checkmate_execution_plan.png" width=450/>
 
 ### 2. **Cost Modeling**
 
 #### **Hardware-Aware Profiling**
 
-Accurate cost modeling is crucial for optimal decisions:
+Profile network layers on target hadware with random inputes across a range of batch sizes and input sizes.
+- dense kernel (like matmul) have low variance in runtime & independant on specific input data
 
 **Memory Costs**:
 - Tensor storage: `S(v) = tensor_size(v) × element_size`
@@ -312,11 +317,7 @@ Accurate cost modeling is crucial for optimal decisions:
 - Hardware-specific measurements (GPU model, memory bandwidth)
 - Include data movement costs between memory levels
 
-**Profile-Guided Optimization**:
-1. **Static profiling**: Measure operation costs offline
-2. **Shape inference**: Compute tensor sizes for given input shapes
-3. **Cost interpolation**: Estimate costs for unseen tensor sizes
-4. **Hardware adaptation**: Different profiles for different accelerators
+
 
 ### 3. **Solving Strategies**
 
@@ -375,14 +376,8 @@ Problem:
 U <= (1 - e) M
 ```
 
+<img src="Figs/checkmate_two_phase_rounding.png" width=450/>
 
-### Interesting Findings
-
-#### **Empirical Results**:
-- **5.1x larger inputs**: Demonstrated on ResNet, Transformer models
-- **2-3x memory reduction**: Typical savings with <10% time overhead
-- **Break-even analysis**: When recomputation pays off vs. smaller batches
-- **Memory bandwidth**: Critical factor in recomputation decisions
 
 
 #### **Architectural Patterns**:
