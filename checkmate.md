@@ -115,15 +115,10 @@ Step 1: Model as a DAG
 - Edges = tensor dependencies.
 - Each tensor has a memory cost.
 
-Step 2: Formulate the Optimization Problem (MILP)
-- Decision Variables:
-    - which tensor to keep in memory vs. recompute
-    - scheduling of forward/backward ops
-- Constraints:
-    - Memory usage at any time <= device limit
-    - dependency order is respected
-- Objective:
-    - minimize total computation time (original + recomputetation)
+Step 2: Formulate as Mixed-Integer Linear Program (MILP)
+- Decision variables: which tensors to store vs. recompute, operation scheduling
+- Constraints: memory budget, dependency order, recomputation feasibility
+- Objective: minimize total training time including recomputation overhead
 
 Step 3: Solving with MILP
 - use standard MILP solver
@@ -140,20 +135,7 @@ Step 4: Execution
 - **Constraint satisfaction**: Ensure memory limits while minimizing training time
 - **Profile-guided optimization**: Use real hardware measurements for accurate costs
 
-#### **Principled Optimization**:
-- **General graphs**: Handle arbitrary computational graphs (not just chains)
-- **Realistic costs**: Use profiled hardware-specific costs
-- **Global optimization**: Consider entire computation holistically
 
-#### **MILP Formulation Advantages**:
-- **Optimality**: Find provably best solutions when possible
-- **Flexibility**: Easy to add constraints (memory, time, etc.)
-- **Generality**: Handle any DAG structure, not just chains
-
-#### **Systems Integration**:
-- **Framework integration**: Work with existing training code
-- **Runtime adaptation**: Handle dynamic tensor shapes and costs
-- **Error handling**: Graceful degradation when predictions are wrong
 
 ### Pros & Cons
 
@@ -518,25 +500,7 @@ subject to:  Ax + By ≤ b
 - **Checkpointing**: Select optimal points for gradient checkpointing
 - **Pipeline optimization**: Optimize pipeline parallelism schedules
 
-### Why MILP for Checkmate?
 
-#### **Natural Fit**:
-- **Binary decisions**: Store tensor (1) or recompute (0)
-- **Resource constraints**: Memory budget as linear constraint
-- **Optimization goal**: Minimize training time (linear objective)
-- **Dependencies**: Tensor dependencies as linear constraints
-
-#### **Advantages**:
-- **Optimality guarantees**: MILP solvers find provably optimal solutions
-- **Mature tooling**: Commercial solvers are highly optimized
-- **Flexibility**: Easy to add new constraints and objectives
-- **Scalability**: Modern solvers handle problems with millions of variables
-
-#### **Challenges**:
-- **Complexity**: NP-hard problems can have exponential solve times
-- **Modeling accuracy**: Linear approximations may miss important effects  
-- **Dynamic behavior**: Static solutions may not adapt to runtime changes
-- **Solver dependence**: Requires access to commercial or complex open-source solvers
 
 ### Advanced MILP Techniques
 
@@ -571,11 +535,7 @@ subject to:  Ax + By ≤ b
 - Without stored activations, would need to recompute entire forward pass
 - Memory usage peaks during forward pass, then decreases during backward
 
-#### **The Memory Wall**:
-- **Model growth**: Networks getting deeper and wider over time
-- **Batch size**: Larger batches improve training but multiply memory needs  
-- **Hardware limits**: GPU memory has not grown as fast as model sizes
-- **Cost implications**: Smaller batches mean less efficient training
+
 
 ### Gradient Checkpointing Approaches
 
@@ -760,7 +720,6 @@ Input → Conv1 → Activation1 → Conv2 → Activation2 → ... → Loss
 - **Compute growth**: FLOPS grow faster than memory bandwidth
 - **Capacity limits**: Memory capacity grows slower than model sizes
 - **Cost considerations**: Memory is often the expensive component
-
 #### **Future Directions**:
 - **High bandwidth memory**: HBM2e, HBM3 for higher bandwidth
 - **Near-data processing**: Processing-in-memory technologies
