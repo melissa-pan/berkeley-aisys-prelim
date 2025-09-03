@@ -15,6 +15,7 @@ deep learning system + optimization paper.
 > What problem does this paper solve?
 
 - **Memory Wall**: Deep neural network training is limited by GPU memory, not computation
+    - *Activations* take up A LOT OF memory
     - Training modern DNN is memory intensive, espcially with larger batch sizes, long sequences (transformers), or deep architectures.
     - GPUs are extremely powerful at compute, but their device memory HBM is limited (16-80GB), and training can require hundreds of GBs.
 - **Scale Limitation**: Larger models and batch sizes are constrained by memory capacity
@@ -22,7 +23,9 @@ deep learning system + optimization paper.
 - **Suboptimal Checkpointing**: Prior checkpointing strategies are ad-hoc and suboptimal
 
 
-**Can we systematically find the optimal rematerialization policy for a given model and device?
+** Can we systematically find the optimal rematerialization policy for a given model and device?
+
+** How to trade-off between training time and memory requirements?
 
 
 
@@ -32,15 +35,26 @@ deep learning system + optimization paper.
     - don't save any intermediate activations, just recompute them during backprop
     - saves memory but costs alot more compute
 
-- **Gradient Checkpointing (Chen et al.)**: Save only subset of activations, recompute others
-  - save every sqrt(n)-th layer activation
-  - reduce memory from O(n) to O(sqrt(n))
-  - But: heuristic choices of what to checkpoint
+- Activation COmpression: reduce memory by constant factor but also reduce accuracy.
+
+- **Gradient Checkpointing (Chen et al.)**: Save only subset of activations (every √(n)-th layer), recompute others
+  - reduce memory from O(n) to O(√(n))
+  - recomputation at O(n) cost
+  - But: heuristic choices of what to checkpoint 
+        - DNN layers vary significantly in memory usage and computational cost in practice
   - No principled optimization of the memory-time trade-off
   - Often leads to significant computational overhead
 
+Recomputation:
+$$
+\underbrace{\sqrt{n}}_{\text{\#segments}} \times \underbrace{\sqrt{n}}_{\text{segment length}} = O(n)
+$$
+
 - **Heuristic methods in frameworks:**
     - PyTorch, TensorFlow, JAX have “activation checkpointing” utilities, usually hand-designed rules (e.g., checkpoint every block).
+    - Tensorflow: each activation is freed after its graident has been calculated
+
+
 
 These methods are not optimal — they balance memory vs. compute with ad hoc strategies.
 
@@ -50,6 +64,10 @@ These methods are not optimal — they balance memory vs. compute with ad hoc st
 - **Model parallelism**: Split model across multiple devices
   - But: adds communication overhead and complexity
   - Doesn't solve single-device memory constraints
+
+
+<img src="Figs/checkmate_method_comparison.png"/>
+
 
 ### The Key Idea
 
@@ -122,6 +140,21 @@ Step 4: Execution
 - **Constraint satisfaction**: Ensure memory limits while minimizing training time
 - **Profile-guided optimization**: Use real hardware measurements for accurate costs
 
+#### **Principled Optimization**:
+- **General graphs**: Handle arbitrary computational graphs (not just chains)
+- **Realistic costs**: Use profiled hardware-specific costs
+- **Global optimization**: Consider entire computation holistically
+
+#### **MILP Formulation Advantages**:
+- **Optimality**: Find provably best solutions when possible
+- **Flexibility**: Easy to add constraints (memory, time, etc.)
+- **Generality**: Handle any DAG structure, not just chains
+
+#### **Systems Integration**:
+- **Framework integration**: Work with existing training code
+- **Runtime adaptation**: Handle dynamic tensor shapes and costs
+- **Error handling**: Graceful degradation when predictions are wrong
+
 ### Pros & Cons
 
 > Strengths:
@@ -139,6 +172,10 @@ Step 4: Execution
 - **Memory model assumptions**: Simplified memory model may not capture all overhead
 
 ### Impact & Contributions
+
+> Key results
+
+1. 5.1x bigger input size
 
 > Key contributions to the field:
 
@@ -204,7 +241,7 @@ Gurantee optimality. Saves order of magnitude of memory for some model and enabl
 - "Gradient Checkpointing" techniques and related work
 - Mixed-Integer Linear Programming tutorials and solvers
 
----
+
 
 ## 2. 🔬 Key Technical Details
 
@@ -602,23 +639,6 @@ def forward_with_checkpointing(x, layers, k=2):
 - **Chain graphs**: Most work focused on feed-forward chains
 - **Single device**: Don't optimize across multiple GPUs/devices
 - **Static schedules**: Don't adapt to runtime conditions
-
-### Checkmate's Innovations
-
-#### **Principled Optimization**:
-- **General graphs**: Handle arbitrary computational graphs (not just chains)
-- **Realistic costs**: Use profiled hardware-specific costs
-- **Global optimization**: Consider entire computation holistically
-
-#### **MILP Formulation Advantages**:
-- **Optimality**: Find provably best solutions when possible
-- **Flexibility**: Easy to add constraints (memory, time, etc.)
-- **Generality**: Handle any DAG structure, not just chains
-
-#### **Systems Integration**:
-- **Framework integration**: Work with existing training code
-- **Runtime adaptation**: Handle dynamic tensor shapes and costs
-- **Error handling**: Graceful degradation when predictions are wrong
 
 ## Background Concepts: Memory Hierarchy and GPU Architecture
 
