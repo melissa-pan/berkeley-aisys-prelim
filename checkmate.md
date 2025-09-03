@@ -136,6 +136,19 @@ Step 4: Execution
 - **Profile-guided optimization**: Use real hardware measurements for accurate costs
 
 
+### Evaluation
+Baseline:
+- checkpoint all
+- AP sqrt(n) + greedy
+- linearize sqrt(n) + greedy
+
+Q: how much extra compute do we pay for memory saving
+- optimal on linear nets and dominate on DAG
+
+Q: Can we increase batch size or resolution under the same GPU memory?
+- Reformulate ILP to maximize batch size subject to cost ≤ one extra forward pass.
+- Compare max batch size achievable with each method.
+- Takeaway: Rematerialization enables unprecedented batch sizes, especially important for models with batch norm.
 
 ### Pros & Cons
 
@@ -225,13 +238,17 @@ Gurantee optimality. Saves order of magnitude of memory for some model and enabl
 
 
 
+
+
+
+
+
+
 ## 2. 🔬 Key Technical Details
 
 ### 1. **Problem Formulation**
 
-#### **Tensor Rematerialization as Optimization**
-
-The core insight is to formalize the memory-time trade-off as a mathematical optimization problem:
+**Tensor Rematerialization as Optimization**: The core insight is to formalize the memory-time trade-off as a mathematical optimization problem:
 
 **Given**: 
 - Computational graph G = (V, E) representing DNN forward/backward pass
@@ -264,6 +281,20 @@ Recomputation constraints: Can only recompute if inputs available
 - `s_v ∈ {0,1}`: whether to store tensor v
 - `r_v,t ∈ {0,1}`: whether to recompute tensor v at time t
 - `m_t`: memory usage at time t
+
+Execution Dependancy: 
+
+<img src="Figs/checkmate_ILP_constraints.png" width=550/>
+
+Memory Constraints:
+
+<img src="Figs/checkmate_memory_tracking.png" width=450/>
+
+Linear Reformulation of Memory Constraints:
+- Before: Free was a complicated AND / NOT condition
+- After: simple linear inequality
+
+
 
 ### 2. **Cost Modeling**
 
@@ -311,93 +342,48 @@ Use commercial or open-source MILP solvers:
 
 For cases where exact solving is too slow:
 
-**Greedy Heuristics**:
-- **Benefit-cost ratio**: Prioritize tensors with highest reuse/memory ratio
-- **Critical path**: Focus on tensors on longest computational paths
-- **Memory pressure**: Adapt decisions based on current memory usage
 
-**Dynamic Programming**:
-- Optimal substructure for certain graph topologies
-- Linear time for chains and trees
-- Exponential for general DAGs but practical for many networks
+- LP relaxation is fast, but solutions are fractional. We need to “round” them into binary (0 or 1).
 
-**Evolutionary Approaches**:
-- Genetic algorithms for schedule optimization
-- Simulated annealing for local search improvements
-- Population-based methods for diverse solution exploration
 
-### 4. **System Implementation**
-
-#### **Framework Integration**
-
-**PyTorch Integration**:
-- Hook into autograd system for automatic scheduling
-- Custom memory allocator for precise tracking
-- Backward hook registration for recomputation triggers
-
-```python
-# Simplified integration example
-class CheckmateHook:
-    def __init__(self, schedule):
-        self.schedule = schedule
-    
-    def __call__(self, grad):
-        # Apply rematerialization schedule
-        return self.recompute_if_needed(grad)
+```
+R,S,FREE∈{0,1}
+```
+relax to:
+```
+R,S,FREE∈[0,1]
 ```
 
-**Execution Engine**:
-- **Schedule interpretation**: Convert MILP solution to executable actions
-- **Memory management**: Track allocation/deallocation precisely  
-- **Recomputation triggers**: Invoke forward computation when tensors needed
-- **Error handling**: Fallback strategies when memory estimates are wrong
+Naive rounding doesn't work: Deterministic rounding (≥ 0.5 → 1) → often violates constraints.
 
-#### **Memory Tracking**
+Two-phase deterministic round:
+1. Step 1. Round checkpoints
+```
+St,iint​=1[St,i∗​>0.5]
+```
+2. Step 2. Fix recomputation decisions
+    - Start with all R = 0
+    - iteratively add recompute until constraint is met
+        - once R_{t,i} =1 , it will never change
+    - do in reverse topological order to make sure earlier dependecies are handled
 
-**Precise Accounting**:
-- Track every tensor allocation and deallocation
-- Account for temporary tensors during operations
-- Handle memory fragmentation effects
+Problem:
+- After rounding, the solution might exceed memory budget M_budget.
+- Why? Because the LP solution exactly satisfies constraints, but rounding to binary can add extra checkpoints.
+- Solution: leave a margin of epsilon 
+```
+U <= (1 - e) M
+```
 
-**Dynamic Adaptation**:
-- Monitor actual vs. predicted memory usage
-- Adjust schedule if predictions are inaccurate
-- Emergency fallback to gradient checkpointing
-
-### 5. **Advanced Techniques**
-
-#### **Multi-GPU Optimization**
-
-**Distributed Memory**: 
-- Model memory across multiple devices
-- Optimize tensor placement and movement
-- Account for communication costs
-
-**Pipeline Integration**:
-- Coordinate with pipeline parallelism
-- Optimize across pipeline stages
-- Handle bubble time and memory trade-offs
-
-#### **Dynamic Batching**
-
-**Adaptive Batch Sizes**:
-- Increase batch size when memory permits
-- Maintain training stability with larger batches
-- Optimize for throughput vs. memory trade-offs
 
 ### Interesting Findings
 
 #### **Empirical Results**:
-
-**Memory Scaling**:
 - **5.1x larger inputs**: Demonstrated on ResNet, Transformer models
 - **2-3x memory reduction**: Typical savings with <10% time overhead
 - **Break-even analysis**: When recomputation pays off vs. smaller batches
-
-**Hardware Insights**:
-- **V100 vs A100**: Different optimal strategies due to compute/memory ratios  
 - **Memory bandwidth**: Critical factor in recomputation decisions
-- **Tensor Core utilization**: Affects recomputation cost estimates
+
 
 #### **Architectural Patterns**:
 
@@ -429,6 +415,10 @@ class CheckmateHook:
 - Jain, P., Jain, A., Nrusimha, A., Gholami, A., Abbeel, P., Keutzer, K., ... & Gonzalez, J. E. (2020). Checkmate: Breaking the memory wall with optimal tensor rematerialization. Proceedings of Machine Learning and Systems, 2, 497-511.
 - Chen, T., Xu, B., Zhang, C., & Guestrin, C. (2016). Training deep nets with sublinear memory cost. arXiv preprint arXiv:1604.06174.
 - Gurobi Optimization, LLC. (2023). Gurobi Optimizer Reference Manual.
+
+
+
+
 
 ## Background Concepts: Mixed-Integer Linear Programming (MILP)
 
