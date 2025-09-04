@@ -13,7 +13,7 @@ The notes are organized according to the [official AISYS prelim reading list](ht
 | 1 | ImageNet Classification with Deep Convolutional Neural Networks | [PDF](https://proceedings.neurips.cc/paper_files/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf) | [📝](alexnet.md) | Training Systems | NeurIPS | 2012 |
 | 2 | XGBoost: A Scalable Tree Boosting System | [PDF](https://arxiv.org/pdf/1603.02754) | [📝](xgboost.md) | ClassicML | KDD | 2016 |
 | 3 | Checkmate: Breaking the Memory Wall with Optimal Tensor Rematerialization | [PDF](https://arxiv.org/abs/1910.02653) | [📝](checkmate.md) | TensorOptimization | - | - |
-| 4 | Anatomy of High-Performance Matrix Multiplication | [PDF](https://www.cs.utexas.edu/~pingali/CS378/2008sp/papers/gotoPaper.pdf) | [📝](paper_04.md) | Architecture | - | - |
+| 4 | Anatomy of High-Performance Matrix Multiplication | [PDF](https://www.cs.utexas.edu/~pingali/CS378/2008sp/papers/gotoPaper.pdf) | [📝](anatomy_mm.md) | Architecture | - | - |
 | 5 | Why Systolic Architectures | [PDF](http://www.eecs.harvard.edu/~htk/publication/1982-kung-why-systolic-architecture.pdf) | [📝](paper_05.md) | Architecture | - | - |
 | 6 | PowerGraph: Distributed Graph-Parallel Computation on Natural Graphs | [PDF](https://www.usenix.org/system/files/conference/osdi12/osdi12-final-167.pdf) | [📝](paper_06.md) | Graph Systems | OSDI | 2012 |
 | 7 | The Case for Learned Index Structures | [PDF](https://arxiv.org/abs/1712.01208) | [📝](paper_07.md) | AI for Systems | SIGMOD | 2018 |
@@ -25,6 +25,12 @@ The notes are organized according to the [official AISYS prelim reading list](ht
 | 13 | GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers | [PDF](https://arxiv.org/abs/2210.17323) | [📝](paper_13.md) | Quantization | - | 2022 |
 | 14 | Megatron-LM: Training Multi-Billion Parameter Language Models Using Model Parallelism | [PDF](https://arxiv.org/abs/1909.08053) | [📝](paper_14.md) | Scaling Training, Training Systems | - | 2018 |
 | 15 | Efficient Memory Management for Large Language Model Serving with PagedAttention | [PDF](https://arxiv.org/abs/2309.06180) | [📝](paper_15.md) | Inference Systems | SOSP | 2023 |
+
+
+## General Knowledge
+Hardware architectures and overview: [📝](hardware_architecture.md)
+
+Parallelism:  [📝](parallelism.md)
 
 
 ## 📝 Note Structure
