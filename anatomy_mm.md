@@ -168,6 +168,11 @@ GEPDOT: in this case, C is packed into L2
 
 ### 2. **The GOTO Algorithm Framework**
 
+<img src="Figs/mm_6ways.png" width=750/>
+
+<img src="Figs/mm_decompose.png" width=750/>
+
+
 #### GEPP with GEBP
 - GEPP is efficiently implemented by packing B once, then repeatedly calling GEBP with packed A blocks.
 - Packing overhead is small (amortized over many flops).
