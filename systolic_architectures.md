@@ -259,8 +259,6 @@ Many cells working together
     - Design scalable and modular (e.g., extend array length with no changes to control).
 
 
-Quantized W -> weighter
-
 ### Key algorithms and techniques:
 
 1. **Matrix Multiplication Systolic Array:**
@@ -269,6 +267,8 @@ Quantized W -> weighter
 - Partial results accumulate as they propagate through the array structure
 - Achieves O(n²) processors completing n×n matrix multiplication in O(n) time steps
 - Input matrices are fed systematically to maintain continuous processor utilization
+
+<img src="Figs/systollic_2d.png"/>
 
 2. **Linear Systolic Arrays:**
 - One-dimensional chain of processors for computations with linear data dependencies
