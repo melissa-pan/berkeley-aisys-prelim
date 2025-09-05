@@ -50,7 +50,6 @@ How to use it:
 - If far below both -> inefficency: synchronization, poor compiler vecotorization etc...
 
 ## The Challenge
-### What are the main challenges in solving this problem?
 - **Accurate measurement**: Obtaining precise measurements of operational intensity and memory bandwidth
 - **Model simplicity vs. accuracy**: Balancing ease of understanding with architectural complexity
 - **Multiple memory levels**: Handling complex memory hierarchies (L1, L2, L3 cache, DRAM)
@@ -67,21 +66,13 @@ How to use it:
 - Use microbenchmarks to empirically determine system-specific rooflines
 - Provide optimization guidance based on application position relative to rooflines
 
-## Pros & Cons
-### Strengths:
+## Strengths:
 - **Intuitive visualization**: Simple 2D plot that clearly communicates performance limitations
 - **Optimization guidance**: Directly suggests whether to focus on computation or memory optimizations
 - **Broad applicability**: Works across different architectures and application domains
 - **Quantitative insights**: Provides concrete performance bounds rather than just relative comparisons
 - **Communication tool**: Effective for discussing performance with both technical and non-technical audiences
 - **Implementation simplicity**: Relatively straightforward to measure and plot
-
-### Weaknesses/Limitations:
-- **Simplified model**: Doesn't capture all architectural complexities (cache effects, prefetching, etc.)
-- **Static analysis**: Based on peak theoretical performance rather than dynamic behavior
-- **Memory hierarchy**: Original model doesn't distinguish between different memory levels
-- **Application phases**: Single point may not represent applications with varying operational intensity
-- **Measurement challenges**: Accurate operational intensity measurement can be difficult for complex codes
 
 ## Impact & Contributions
 ### Key contributions to the field:
@@ -95,19 +86,11 @@ How to use it:
 - **Industry adoption**: Widely adopted by Intel, AMD, NVIDIA and other processor vendors
 - **Tool integration**: Became standard feature in performance analysis tools (Intel Advisor, etc.)
 - **Research methodology**: Influenced how computer architecture research evaluates and presents performance
-- **Curriculum integration**: Became standard teaching tool in computer architecture courses
 - **Extended models**: Spawned numerous extensions for GPUs, accelerators, and complex memory hierarchies
 - **Performance culture**: Changed how developers think about and approach performance optimization
 
 
 ## Background & History
-- **Useful background knowledge:**
-  - Computer architecture and memory hierarchy design
-  - Performance analysis and benchmarking methodologies
-  - Parallel computing and multicore processor design
-  - Memory bandwidth and computational throughput concepts
-
-### **Pre-history and context:**
 - Mid-2000s: Transition to multicore era requiring new performance analysis approaches
 - Growing complexity of memory hierarchies and cache systems
 - Need for systematic performance optimization methodologies
@@ -134,14 +117,32 @@ Because OI measures traffic between caches and DRAM, not between processor and c
 Performance upper bound = min(Peak FLOP/s, Peak Bandwidth × OI)
 
 This creates two regions:
-- **Memory-bound region**: P ≤ β × I (when I is low)
-- **Compute-bound region**: P ≤ π (when I is high)
+- **Memory-bound region**: P ≤ β × OI (when OI is low)
+- **Compute-bound region**: P ≤ π (when OI is high)
 
 ### Roofline Construction:
 1. **Memory bandwidth ceiling**: Sloped line with slope (peaked bandwidth) on log-log plot
 2. **Compute ceiling**: Horizontal line at height peak attainable
 3. **Ridge point**:level of difficulty for programmer and compiler to achieve peak performance
 
+
+### Connection to 3Cs
+- Compulsory misses set a lower bound on DRAM traffic.
+    -  They define the best possible (highest) OI for a given kernel.
+    - You can’t eliminate compulsory misses, so they represent the upper limit of achievable OI.
+- Capacity misses and conflict misses add extra DRAM traffic.
+    - This lowers OI, shifting the kernel leftward on the Roofline plot.
+    - More DRAM traffic → lower OI → kernel more likely memory-bound.
+
+fewer unnecessary DRAM loads → higher OI.
+
+### Performance Model with the Seven Dwarf
+- The ridge point is the most insightful metric:
+    - High ridge point machines (Xeon, Opteron): Only very compute-dense workloads can achieve peak. Others are memory-bound.
+    - Low ridge point machines (T2+, Cell): Easier to hit peak performance for a wider range of kernels, but the compute roof may be lower.
+- The Roofline model + ceilings bounded all observed performance across machines and kernels.
+    - E.g., SpMV was always far below the compute roof and limited by bandwidth ceilings.
+    - FFT performance depended on whether cache-blocking increased OI enough to shift it into the compute-bound region.
 
 ### Key Algorithmic Techniques:
 
@@ -190,29 +191,19 @@ This creates two regions:
    - Sustained bandwidth measurement under different access patterns
    - Cache hierarchy characterization
 
-## Extensions and Variations
-
-### Cache-Aware Rooflines:
-- Multiple rooflines for each cache level
-- Traffic analysis at each memory hierarchy level
-- Optimization guidance specific to cache behavior
-
-### Little's Law Integration:
-- Connect memory latency with bandwidth analysis
-- Account for memory-level parallelism effects
-- Provide insights into prefetching effectiveness
-
-### NUMA-Aware Models:
-- Separate analysis for local vs. remote memory access
-- Thread placement optimization guidance
-- Multi-socket system performance modeling
-
-### Specialized Architecture Extensions:
-- GPU roofline models with different computational units
-- Vector processor adaptations
-- Accelerator-specific variations
 
 ## Interesting Findings and Insights
+
+### Fallacy Debunk
+- Caches/prefetching aren’t ignored — they directly influence OI and bandwidth ceilings
+- Bigger cache don't automatically shift kernel to the right, OI is often bounded by compulsory misses (cold miss, occurs when data is accessed for the very first time)
+- Latency is reflected in the bandwidth ceilings, not ignored.
+- Integer bottlenecks are modeled as ceilings (like “floating-point balance”), not as part of OI.
+- Roofline works for single cores, but multicore makes its insights more critical.
+- Roofline is a machine property; kernels are mapped onto it.
+- The model applies broadly, not just to cache-miss-heavy codes.
+- Roofline is general — FLOPs are just one example.
+- The diagonal roof can represent any level of the memory hierarchy, depending on the kernel’s working set.
 
 ### Performance Characterization:
 - **Memory wall confirmation**: Many applications are indeed memory-bound rather than compute-bound
@@ -228,12 +219,6 @@ This creates two regions:
 - **Balanced design**: Need to match memory bandwidth with computational capability
 - **Specialization benefits**: Different applications benefit from different architectural balance points
 - **Technology trends**: Memory bandwidth scaling slower than computational capability
-
-### Educational Value:
-- **Intuitive understanding**: Helps developers build intuition about performance trade-offs
-- **Quantitative reasoning**: Provides concrete targets for optimization efforts
-- **Cross-architecture insights**: Reveals fundamental performance principles across different systems
-
 
 # 📚 References
 - Williams, S., Waterman, A., & Patterson, D. (2009). Roofline: An Insightful Visual Performance Model for Multicore Architectures. Communications of the ACM, 52(4), 65-76.
@@ -297,12 +282,6 @@ This creates two regions:
 - **Energy rooflines**: Integration of power consumption with performance analysis
 - **AI/ML rooflines**: Specialized models for neural network and machine learning workloads
 
-### Educational Impact:
-- **Curriculum integration**: Standard component in computer architecture and high-performance computing courses
-- **Textbook adoption**: Featured in major computer architecture textbooks
-- **Online resources**: Extensive tutorial and educational material development
-- **Visualization tools**: Interactive educational tools for exploring performance concepts
-
 ## Key Insights for Modern Computing
 
 ### Performance Optimization Strategy:
@@ -319,6 +298,7 @@ This creates two regions:
 
 ## Useful Resources:
 - Original Berkeley Roofline webpage: https://crd.lbl.gov/departments/computer-science/par/research/roofline/
+- https://www.youtube.com/watch?v=tblBGkefcOQ 
 - Intel Advisor Roofline documentation and tutorials
 - "Computer Architecture: A Quantitative Approach" by Hennessy & Patterson (includes Roofline discussion)
 - Various academic papers extending roofline to GPUs, distributed systems, and specialized domains
@@ -353,3 +333,12 @@ Q: what kind of impact can prefetching and data alignment have on DRAM?
 
 
 # Background: Amdahl’s Law
+
+
+# Background: SIMD
+
+
+# Background: vecotrization
+
+
+
