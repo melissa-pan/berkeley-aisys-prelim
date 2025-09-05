@@ -19,7 +19,7 @@ The notes are organized according to the [official AISYS prelim reading list](ht
 | 7 | The Case for Learned Index Structures | [PDF](https://arxiv.org/abs/1712.01208) | [📝](paper_07.md) | AI for Systems | SIGMOD | 2018 |
 | 8 | Using the BSP cost model to optimise parallel neural network training | [PDF](https://www.sciencedirect.com/science/article/abs/pii/S0167739X98000430) | [📝](paper_08.md) | Pre-rec, Scaling Training | Future Generation Computer Systems | 1998 |
 | 9 | Machine Learning: The High Interest Credit Card of Technical Debt | [PDF](https://research.google/pubs/machine-learning-the-high-interest-credit-card-of-technical-debt/) | [📝](paper_09.md) | Industry Perspective | NeurIPS Workshop | 2014 |
-| 10 | Roofline: An Insightful Visual Performance Model for Multicore Architectures | [PDF](https://dl.acm.org/doi/10.1145/1498765.1498785) | [📝](paper_10.md) | Architecture | CACM | 2009 |
+| 10 | Roofline: An Insightful Visual Performance Model for Multicore Architectures | [PDF](https://dl.acm.org/doi/10.1145/1498765.1498785) | [📝](roofline.md) | Architecture | CACM | 2009 |
 | 11 | AlpaServe: Statistical Multiplexing with Model Parallelism for Deep Learning Serving | [PDF](https://www.usenix.org/conference/osdi23/presentation/li-zhouhan) | [📝](paper_11.md) | Inference Systems | OSDI | 2023 |
 | 12 | TensorFlow: A System for Large-Scale Machine Learning | [PDF](https://www.usenix.org/system/files/conference/osdi16/osdi16-abadi.pdf) | [📝](paper_12.md) | Training Systems | OSDI | 2016 |
 | 13 | GPTQ: Accurate Post-Training Quantization for Generative Pre-trained Transformers | [PDF](https://arxiv.org/abs/2210.17323) | [📝](paper_13.md) | Quantization | - | 2022 |
