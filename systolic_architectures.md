@@ -81,8 +81,6 @@ Diminishing growth rate for component speed up, need for concurrency where coord
 - **Performance-cost optimization**: Provided framework for balancing performance with implementation cost
 - **Foundation for modern accelerators**: Laid conceptual groundwork for specialized computing architectures
 
-The vision: "The challenge is to develop architectures that can deliver the computational power of many processors while maintaining cost-effectiveness and programming simplicity through regular, modular designs."
-
 ### How did this paper change the field after its release?
 - **AI hardware revolution**: Modern neural network accelerators (Google TPU, etc.) directly implement systolic principles
 - **GPU architecture influence**: Graphics processors adopted similar pipelined, parallel execution models
@@ -260,6 +258,8 @@ Many cells working together
     - Timing predictable (even if clock skew exists along a 1D array).
     - Design scalable and modular (e.g., extend array length with no changes to control).
 
+
+Quantized W -> weighter
 
 ### Key algorithms and techniques:
 
