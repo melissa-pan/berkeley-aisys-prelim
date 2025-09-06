@@ -10,11 +10,16 @@
 
 # 1. 📖 Paper Understanding
 
+- first method to show accurate 4-bit PTQ on LLMs up to 175B parameters.
+- It proved that LLMs can be quantized without retraining and still retain performance close to FP16.
+- Enabled wide deployment of large models on consumer GPUs
+- Became the foundation for many open-source inference stacks
+
 ## The Problem
 
 ### What problem does this paper solve?
 
-Large generative pre-trained transformer models (GPT, OPT) achieve breakthrough performance but suffer from extremely high computational and storage costs. Specifically:
+LLM suffer from high computation and storage cost. Specifically:
 
 - Even inference for large GPT models requires multiple performant GPUs due to massive size
 - This severely limits the usability and accessibility of such models
@@ -26,19 +31,23 @@ Large generative pre-trained transformer models (GPT, OPT) achieve breakthrough 
 Existing post-training quantization methods had significant limitations:
 - Previous one-shot quantization methods achieved limited compression gains
 - Accuracy degradation was substantial when applied to very large models
-- Quantization methods were not optimized for the specific characteristics of transformer architectures
+- Quantization methods were not optimized for transformer architectures
 - Computational requirements for quantization itself were prohibitive for billion-parameter models
 
 
 ## The Key Idea
 
-GPTQ introduces a new one-shot weight quantization method based on approximate second-order information that is both highly accurate and highly efficient.
+A new one-shot weight quantization method based on approximate second-order information that is both highly accurate and highly efficient.
 
 Key innovations:
 - **One-shot quantization**: No need for retraining or fine-tuning after quantization
 - **Second-order information**: Uses approximate Hessian information for more accurate quantization decisions
 - **Layer-wise quantization**: Processes one transformer layer at a time to manage memory requirements
 - **Adaptive bit allocation**: Can quantize weights to 3-4 bits (or even 2-bit/ternary) based on importance
+
+Intuition Behind Why It Works:
+- second-order statistics (Hessian) propagate and correct quantization error as it goes → minimizes output distortion globally
+- Works especially well for transformers where linear projections dominate computation
 
 Advantages:
 - **Speed**: Can quantize 175B parameter models in approximately 4 GPU hours
@@ -134,28 +143,44 @@ Advantages:
 - **Error propagation**: Updates remaining weights to compensate for quantization errors
 - **Layer-wise processing**: Handles memory constraints by processing layers sequentially
 
-### Technical Implementation
 
-1. **Calibration Phase**:
-   - Run calibration data through model to collect activation statistics
-   - Compute approximate Hessian matrix for each layer
-   - Use diagonal or low-rank approximations to make computation tractable
+### Arbitrary Order Insight
+In llm, the order in which to pick the greedy quantization doesn't matter because:
+1. each layer is heavily over-parameterized anyways
+2. the compensation mechanism spreads error
 
-2. **Layer-wise Quantization**:
-   ```
-   For each transformer layer:
-     1. Load layer weights and Hessian approximation
-     2. For each weight matrix in layer:
-        a. Quantize weights greedily based on second-order importance
-        b. Update remaining weights to minimize quantization error
-        c. Apply error compensation to maintain accuracy
-     3. Store quantized weights and move to next layer
-   ```
+So using the same fixed column order for all rows works almost as well.
+- That means you only need to do the Hessian inverse update once per column, not separately for every row.
 
-3. **Weight Selection and Quantization**:
-   - Select next weight to quantize based on second-order sensitivity
-   - Choose quantization level that minimizes impact on layer output
-   - Propagate quantization error to remaining weights using Hessian information
+complexity goes from:
+OBQ: $$O(d_{row} \cdot d_{col}^3)$$
+GPTQ: $$O(max(d_{row} \cdot d_{col}^2, d_{col}^3))$$
+
+### Block-wise computation 
+Work on smaller block to fit into the cache line instead of working on the whole large matrix at once.
+
+Update the weight updates and hassian inverse matrix in block fashion as well.
+
+
+
+### Cholesky Reformulation
+
+First two steps creates numeric instability on very large model, because repeated block updates cause numerical errors to accumlates. Roundoff errors loss the positive-definiteness of the H matrix property. This can call weight update to go to the wrong direction due to overflow. Thus quantization collapse. And this always happen for LLM > few billion parameters.
+
+Idea: for each block of weight, it only need the row corresponding to the weight being quantized (starting at the diagnonal element of H). So rather than maintaining the entire H^-1 matrix, we can compute the necessary row in a numerically stable way on the fly for that row we are working on.
+$$
+H = 2 X X^T + \lambda I
+$$
+
+lambda is a small dampening factor. A small positive constant that is ~1% of the average diagonal of H
+- add numerical stability
+- a small bias in case H is nearly singular (small eigenvalues)
+- It’s a deterministic shrinkage of the Hessian, applied uniformly to all diagonal entries.
+
+Instead of repeatedly mutating H^{-1}, GPTQ computes the Cholesky once and uses it to fetch the needed inverse information as quantization proceeds.
+
+With Cholesky, you don’t keep the whole H^-1; you store a compact factorized copy that never drifts, and when you need a number you compute it stably from that.
+
 
 ### Mathematical Formulation
 
@@ -169,6 +194,7 @@ Advantages:
 - Diagonal Hessian approximation: H ≈ diag(h₁, h₂, ..., hₙ)
 - Lazy weight updates: batch updates to reduce computational overhead
 - Memory management: process layers sequentially to fit in GPU memory
+
 
 ### Key Algorithms and Techniques
 
@@ -265,5 +291,4 @@ Quantization in deep learning:
 
 
 ## Useful Resources
-- Author's yt video: https://www.youtube.com/watch?v=OKpSgL9oMWU
 - Explaination: https://www.youtube.com/watch?v=6J_0BDqMFi0 
