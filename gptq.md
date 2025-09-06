@@ -43,7 +43,6 @@ Key innovations:
 - **One-shot quantization**: No need for retraining or fine-tuning after quantization
 - **Second-order information**: Uses approximate Hessian information for more accurate quantization decisions
 - **Layer-wise quantization**: Processes one transformer layer at a time to manage memory requirements
-- **Adaptive bit allocation**: Can quantize weights to 3-4 bits (or even 2-bit/ternary) based on importance
 
 Intuition Behind Why It Works:
 - second-order statistics (Hessian) propagate and correct quantization error as it goes → minimizes output distortion globally
@@ -67,6 +66,8 @@ Advantages:
 ## The Method
 ### Brief overview (detailed analysis in Section 2):
 
+Apply OBQ with additional system optimizations.
+
 - **Layer-by-layer processing**: Quantizes one transformer layer at a time to manage memory
 - **Approximate second-order information**: Uses diagonal approximation and other techniques to make Hessian computation tractable
 - **Optimal Brain Quantization (OBQ) framework**: Extends OBQ method with computational optimizations for large scale
@@ -74,8 +75,7 @@ Advantages:
 - **Error compensation**: Adjusts remaining weights to compensate for quantization errors
 - **Calibration dataset**: Uses small calibration set (no training data required) to compute statistics
 
-## Pros & Cons
-### Strengths:
+## Strengths:
 - **Exceptional speed**: 4 GPU hours for 175B parameters vs. days/weeks for alternative methods
 - **High compression**: Achieves 3-4x compression (4-bit) with minimal accuracy loss
 - **Single GPU deployment**: Enables large model inference on single GPU for first time
@@ -83,14 +83,6 @@ Advantages:
 - **Hardware speedups**: Delivers 3.25x speedup on A100, 4.5x on A6000
 - **Extreme quantization**: Can work reasonably even at 2-bit or ternary levels
 - **Scalable**: Demonstrated to work on models up to 175B parameters
-
-### Weaknesses/Limitations:
-- **Calibration dependence**: Requires representative calibration dataset for optimal results
-- **Memory requirements**: Still requires significant GPU memory during quantization process
-- **Algorithm-specific**: Optimized specifically for transformer architectures
-- **Hardware dependence**: Speedup benefits depend on having appropriate quantized inference kernels
-- **Quality degradation**: Some accuracy loss inevitable, especially at extreme quantization levels
-- **Limited fine-tuning**: Post-training approach cannot recover from suboptimal quantization choices
 
 ## Impact & Contributions
 ### Key contributions to the field:
@@ -100,12 +92,6 @@ Advantages:
 - **Second-order optimization**: Showed how to make second-order methods practical for billion-parameter models
 - **Performance benchmarking**: Demonstrated significant inference speedups on practical hardware
 - **Open source implementation**: Made tools available to broader research community
-
-- **Model Serving**: GPTQ enabled cost-effective deployment of large language models
-- **Research Democratization**: Made large model experimentation accessible to broader community  
-- **Hardware Co-design**: Influenced development of specialized quantization accelerators
-- **Tool Ecosystem**: Generated rich ecosystem of quantization tools and libraries
-- **Industry Adoption**: Widely adopted by companies deploying large language models
 
 ### How did this paper change the field after its release?
 
